@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secret Scanner - Processed Data</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Dark Theme (Default) */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-size: 13px;
+            line-height: 1.4;
+            transition: all 0.3s ease;
+        }
+
+        /* Light Theme */
+        body.light-theme {
+            background-color: #ffffff;
+            color: #333333;
+        }
+
+        .header {
+            background-color: #2d2d2d;
+            padding: 12px 20px;
+            border-bottom: 1px solid #404040;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .light-theme .header {
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-subtitle {
+            color: #888;
+            font-size: 12px;
+        }
+
+        .light-theme .header-subtitle {
+            color: #666;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #ccc;
+            font-size: 12px;
+        }
+
+        .light-theme .checkbox-container {
+            color: #666;
+        }
+
+        .btn {
+            background-color: #404040;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #4a4a4a;
+        }
+
+        .light-theme .btn {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        .light-theme .btn:hover {
+            background-color: #d0d0d0;
+        }
+
+        .btn-primary {
+            background-color: #0066cc;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background-color: #0052a3;
+        }
+
+        .theme-toggle {
+            background-color: #ffd700;
+            color: #1a1a1a;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background-color: #ffed4a;
+        }
+
+        .file-input-container {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+        }
+
+        .file-input-label {
+            background-color: #0066cc;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .file-input-label:hover {
+            background-color: #0052a3;
+        }
+
+        .search-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            background-color: #404040;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 6px 30px 6px 10px;
+            border-radius: 4px;
+            width: 200px;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input::placeholder {
+            color: #888;
+        }
+
+        .light-theme .search-input {
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            color: #333;
+        }
+
+        .light-theme .search-input::placeholder {
+            color: #666;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 8px;
+            color: #888;
+        }
+
+        .main-content {
+            padding: 0;
+            height: calc(100vh - 60px);
+            overflow: auto;
+        }
+
+        .table-container {
+            background-color: #1a1a1a;
+            border: 1px solid #404040;
+            border-radius: 6px;
+            margin: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .light-theme .table-container {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: transparent;
+        }
+
+        th {
+            background-color: #2d2d2d;
+            color: #ccc;
+            font-weight: 500;
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #404040;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+
+        .light-theme th {
+            background-color: #f5f5f5;
+            color: #666;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th:hover {
+            background-color: #353535;
+        }
+
+        .light-theme th:hover {
+            background-color: #e8e8e8;
+        }
+
+        .sortable::after {
+            content: '↕';
+            opacity: 0.5;
+            margin-left: 4px;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #2d2d2d;
+            vertical-align: middle;
+            transition: all 0.3s ease;
+        }
+
+        .light-theme td {
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tr:hover {
+            background-color: #252525;
+        }
+
+        .light-theme tr:hover {
+            background-color: #f8f8f8;
+        }
+
+        .checkbox {
+            width: 16px;
+            height: 16px;
+            accent-color: #0066cc;
+        }
+
+        .archive-link {
+            color: #4a9eff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .archive-link:hover {
+            text-decoration: underline;
+        }
+
+        .author-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .author-name {
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .light-theme .author-name {
+            color: #333;
+        }
+
+        .author-email {
+            color: #888;
+            font-size: 11px;
+        }
+
+        .light-theme .author-email {
+            color: #666;
+        }
+
+        .commit-hash {
+            color: #4a9eff;
+            text-decoration: none;
+            font-family: monospace;
+        }
+
+        .commit-hash:hover {
+            text-decoration: underline;
+        }
+
+        .filename {
+            color: #4a9eff;
+            text-decoration: none;
+            font-family: monospace;
+            font-size: 11px;
+        }
+
+        .filename:hover {
+            text-decoration: underline;
+        }
+
+        .secret-value {
+            font-family: monospace;
+            background-color: #2d2d2d;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #ffd700;
+            font-size: 11px;
+            transition: all 0.3s ease;
+        }
+
+        .light-theme .secret-value {
+            background-color: #f0f0f0;
+            color: #d97706;
+        }
+
+        .detector-badge {
+            background-color: #ffd700;
+            color: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .actions-btn {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .actions-btn:hover {
+            background-color: #404040;
+            color: #fff;
+        }
+
+        .light-theme .actions-btn:hover {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        .filter-input {
+            background-color: #2d2d2d;
+            border: 1px solid #404040;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .filter-input::placeholder {
+            color: #666;
+        }
+
+        .light-theme .filter-input {
+            background-color: #f8f8f8;
+            border: 1px solid #d0d0d0;
+            color: #333;
+        }
+
+        .timestamp {
+            color: #888;
+            font-size: 11px;
+        }
+
+        .light-theme .timestamp {
+            color: #666;
+        }
+
+        .verification-status {
+            color: #ff6b6b;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .verification-status.verified {
+            color: #51cf66;
+        }
+
+        .dropdown-arrow {
+            float: right;
+            margin-left: 10px;
+        }
+
+        .external-link {
+            color: #4a9eff;
+            text-decoration: none;
+            font-size: 11px;
+        }
+
+        .external-link:hover {
+            text-decoration: underline;
+        }
+
+        .status-indicator {
+            margin-left: 10px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .status-loading {
+            background-color: #ffd700;
+            color: #1a1a1a;
+        }
+
+        .status-success {
+            background-color: #51cf66;
+            color: #fff;
+        }
+
+        .status-error {
+            background-color: #ff6b6b;
+            color: #fff;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .light-theme .empty-state {
+            color: #666;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .empty-state p {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="header-title">
+                📊 Processed Data
+            </div>
+            <div class="header-subtitle" id="dataInfo">No data loaded. Please import a JSON file.</div>
+        </div>
+        <div class="header-right">
+            <div class="file-input-container">
+                <input type="file" id="jsonFileInput" class="file-input" accept=".json" />
+                <label for="jsonFileInput" class="file-input-label">
+                    📁 Import JSON
+                </label>
+            </div>
+            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+                🌙 Dark Mode
+            </button>
+            <div class="checkbox-container">
+                <input type="checkbox" class="checkbox" id="hidePrivate">
+                <label for="hidePrivate">🔗 Hide private data</label>
+            </div>
+            <button class="btn" onclick="exportData()">
+                📥 Export
+            </button>
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Global search..." id="globalSearch">
+                <span class="search-icon">🔍</span>
+            </div>
+            <div class="dropdown-arrow">⌄</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="table-container">
+            <div id="emptyState" class="empty-state">
+                <h3>No Data Available</h3>
+                <p>Click "Import JSON" to load your TruffleHog scan results</p>
+                <div class="file-input-container">
+                    <input type="file" id="jsonFileInput2" class="file-input" accept=".json" />
+                    <label for="jsonFileInput2" class="file-input-label btn-primary">
+                        📁 Select JSON File
+                    </label>
+                </div>
+            </div>
+            <table id="secretsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th width="40">
+                            <input type="checkbox" class="checkbox" id="selectAll">
+                        </th>
+                        <th class="sortable" onclick="sortTable(1)">
+                            GH Archive ↕
+                            <br><input type="text" class="filter-input" placeholder="Filter archive..." onclick="event.stopPropagation()">
+                        </th>
+                        <th class="sortable" onclick="sortTable(2)">
+                            Repository ↕
+                            <br><input type="text" class="filter-input" placeholder="Filter repo..." onclick="event.stopPropagation()">
+                        </th>
+                        <th class="sortable" onclick="sortTable(3)">
+                            Author ↕
+                            <br><input type="text" class="filter-input" placeholder="Filter author..." onclick="event.stopPropagation()">
+                        </th>
+                        <th class="sortable" onclick="sortTable(4)">
+                            Commit ↕
+                            <br><input type="text" class="filter-input" placeholder="Filter commit..." onclick="event.stopPropagation()">
+                        </th>
+                        <th class="sortable" onclick="sortTable(5)">
+                            Filename ↕
+                            <br><input type="text" class="filter-input" placeholder="Filter filename..." onclick="event.stopPropagation()">
+                        </th>
+                        <th class="sortable" onclick="sortTable(6)">
+                            Secret ↕
+                            <br><input type="text" class="filter-input" placeholder="Filter secret..." onclick="event.stopPropagation()">
+                        </th>
+                        <th class="sortable" onclick="sortTable(7)">
+                            Detector ↕
+                            <br><input type="text" class="filter-input" placeholder="Filter detector..." onclick="event.stopPropagation()">
+                        </th>
+                        <th width="80">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let secretsData = [];
+        let filteredData = [];
+        let currentTheme = 'dark';
+
+        // Theme toggle functionality
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (currentTheme === 'dark') {
+                body.classList.add('light-theme');
+                themeToggle.textContent = '☀️ Light Mode';
+                currentTheme = 'light';
+            } else {
+                body.classList.remove('light-theme');
+                themeToggle.textContent = '🌙 Dark Mode';
+                currentTheme = 'dark';
+            }
+        }
+
+        // File import functionality
+        function setupFileInput() {
+            const fileInput1 = document.getElementById('jsonFileInput');
+            const fileInput2 = document.getElementById('jsonFileInput2');
+            
+            [fileInput1, fileInput2].forEach(input => {
+                input.addEventListener('change', handleFileSelect);
+            });
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonData = JSON.parse(e.target.result);
+                    loadData(jsonData);
+                    updateDataInfo(jsonData.length);
+                    showTable();
+                } catch (error) {
+                    alert('Error parsing JSON file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function loadData(data) {
+            secretsData = data.map(item => ({
+                detector: item.detector || 'Unknown',
+                decoder: item.decoder || 'PLAIN',
+                raw_secret: item.raw_secret || '',
+                repo_url: item.repo_url || '',
+                commit: item.commit || '',
+                email: item.email || '',
+                file_path: item.file_path || '',
+                timestamp: item.timestamp || '',
+                commit_url: item.commit_url || '',
+                verified: item.verified || false,
+                author_name: extractAuthorName(item.email),
+                author_email: extractAuthorEmail(item.email)
+            }));
+            
+            filteredData = [...secretsData];
+            populateTable();
+        }
+
+        function extractAuthorName(email) {
+            if (!email) return 'Unknown';
+            const match = email.match(/^([^<]+)</);
+            return match ? match[1].trim() : email.split('@')[0];
+        }
+
+        function extractAuthorEmail(email) {
+            if (!email) return '';
+            const match = email.match(/<([^>]+)>/);
+            return match ? match[1] : email;
+        }
+
+        function updateDataInfo(count) {
+            const dataInfo = document.getElementById('dataInfo');
+            dataInfo.textContent = `Found ${count} secret detections. Showing ${count} results.`;
+        }
+
+        function showTable() {
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('secretsTable').style.display = 'table';
+        }
+
+        function populateTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            filteredData.forEach((item, index) => {
+                const row = document.createElement('tr');
+                
+                // Extract repository name from URL
+                const repoName = item.repo_url.split('/').pop() || 'Unknown';
+                
+                // Shorten commit hash for display
+                const shortCommit = item.commit.substring(0, 8);
+                
+                // Extract filename from path
+                const filename = item.file_path.split('/').pop() || 'Unknown';
+                
+                // Format timestamp
+                const date = new Date(item.timestamp);
+                const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                
+                // Truncate secret for display
+                const displaySecret = item.raw_secret.length > 30 ? 
+                    item.raw_secret.substring(0, 30) + '...' : 
+                    item.raw_secret;
+                
+                row.innerHTML = `
+                    <td><input type="checkbox" class="checkbox"></td>
+                    <td><a href="#" class="archive-link">19-${String(index + 1).padStart(8, '0')}</a></td>
+                    <td><a href="${item.repo_url}" class="external-link" target="_blank">${repoName}</a></td>
+                    <td>
+                        <div class="author-info">
+                            <div class="author-name">${item.author_name}</div>
+                            <div class="author-email">${item.author_email}</div>
+                        </div>
+                    </td>
+                    <td><a href="${item.commit_url}" class="commit-hash" target="_blank">${shortCommit}</a></td>
+                    <td><a href="${item.commit_url}" class="filename" target="_blank">${filename}</a></td>
+                    <td><code class="secret-value">${displaySecret}</code></td>
+                    <td><span class="detector-badge">${item.detector.toUpperCase()}</span></td>
+                    <td><button class="actions-btn" onclick="showActions(${index})">👁️</button></td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        function showActions(index) {
+            const item = filteredData[index];
+            alert(`Secret Details:\n\nDetector: ${item.detector}\nDecoder: ${item.decoder}\nVerified: ${item.verified ? 'Yes' : 'No'}\nTimestamp: ${item.timestamp}\nFile: ${item.file_path}\nSecret: ${item.raw_secret}`);
+        }
+
+        function sortTable(columnIndex) {
+            // Basic sorting implementation
+            const table = document.getElementById('secretsTable');
+            const rows = Array.from(table.rows).slice(1); // Skip header
+            
+            rows.sort((a, b) => {
+                const aVal = a.cells[columnIndex].textContent.trim();
+                const bVal = b.cells[columnIndex].textContent.trim();
+                return aVal.localeCompare(bVal);
+            });
+            
+            const tbody = table.tBodies[0];
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        function exportData() {
+            if (secretsData.length === 0) {
+                alert('No data to export. Please import a JSON file first.');
+                return;
+            }
+            
+            const dataStr = JSON.stringify(secretsData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'secrets_export.json';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Search functionality
+        document.getElementById('globalSearch').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            if (searchTerm === '') {
+                filteredData = [...secretsData];
+            } else {
+                filteredData = secretsData.filter(item => {
+                    return Object.values(item).some(value => 
+                        String(value).toLowerCase().includes(searchTerm)
+                    );
+                });
+            }
+            
+            populateTable();
+            updateDataInfo(filteredData.length);
+        });
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            setupFileInput();
+        });
+    </script>
+</body>
+</html>
