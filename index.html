@@ -71,18 +71,6 @@
             gap: 10px;
         }
 
-        .checkbox-container {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: #ccc;
-            font-size: 12px;
-        }
-
-        .light-theme .checkbox-container {
-            color: #666;
-        }
-
         .btn {
             background-color: #404040;
             color: #fff;
@@ -238,6 +226,8 @@
             top: 0;
             z-index: 10;
             transition: all 0.3s ease;
+            cursor: pointer;
+            user-select: none;
         }
 
         .light-theme th {
@@ -254,14 +244,30 @@
             background-color: #e8e8e8;
         }
 
-        .sortable::after {
-            content: '↕';
+        .sortable {
+            position: relative;
+        }
+
+        .sortable:after {
+            content: '⇅';
+            position: absolute;
+            right: 5px;
             opacity: 0.5;
-            margin-left: 4px;
+            font-size: 10px;
+        }
+
+        .sort-asc:after {
+            content: '↑';
+            opacity: 1;
+        }
+
+        .sort-desc:after {
+            content: '↓';
+            opacity: 1;
         }
 
         td {
-            padding: 10px;
+            padding: 12px 10px;
             border-bottom: 1px solid #2d2d2d;
             vertical-align: middle;
             transition: all 0.3s ease;
@@ -285,20 +291,14 @@
             accent-color: #0066cc;
         }
 
-        .archive-link {
+        .repo-name {
             color: #4a9eff;
             text-decoration: none;
             font-weight: 500;
         }
 
-        .archive-link:hover {
+        .repo-name:hover {
             text-decoration: underline;
-        }
-
-        .author-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
         }
 
         .author-name {
@@ -308,15 +308,6 @@
 
         .light-theme .author-name {
             color: #333;
-        }
-
-        .author-email {
-            color: #888;
-            font-size: 11px;
-        }
-
-        .light-theme .author-email {
-            color: #666;
         }
 
         .commit-hash {
@@ -333,56 +324,32 @@
             color: #4a9eff;
             text-decoration: none;
             font-family: monospace;
-            font-size: 11px;
+            font-size: 12px;
         }
 
         .filename:hover {
             text-decoration: underline;
         }
 
-        .secret-value {
-            font-family: monospace;
-            background-color: #2d2d2d;
-            padding: 2px 6px;
-            border-radius: 3px;
-            color: #ffd700;
-            font-size: 11px;
-            transition: all 0.3s ease;
-        }
-
-        .light-theme .secret-value {
-            background-color: #f0f0f0;
-            color: #d97706;
-        }
-
-        .detector-badge {
-            background-color: #ffd700;
-            color: #1a1a1a;
-            padding: 2px 6px;
-            border-radius: 3px;
+        .verification-status {
+            padding: 4px 8px;
+            border-radius: 4px;
             font-size: 11px;
             font-weight: 500;
             text-transform: uppercase;
+            display: inline-block;
+            min-width: 60px;
+            text-align: center;
         }
 
-        .actions-btn {
-            background: none;
-            border: none;
-            color: #888;
-            cursor: pointer;
-            padding: 4px;
-            border-radius: 2px;
-            transition: all 0.3s ease;
+        .verified {
+            background-color: #51cf66;
+            color: #ffffff;
         }
 
-        .actions-btn:hover {
-            background-color: #404040;
-            color: #fff;
-        }
-
-        .light-theme .actions-btn:hover {
-            background-color: #e0e0e0;
-            color: #333;
+        .not-verified {
+            background-color: #ff6b6b;
+            color: #ffffff;
         }
 
         .filter-input {
@@ -394,6 +361,7 @@
             font-size: 11px;
             width: 100%;
             transition: all 0.3s ease;
+            margin-top: 4px;
         }
 
         .filter-input::placeholder {
@@ -404,63 +372,6 @@
             background-color: #f8f8f8;
             border: 1px solid #d0d0d0;
             color: #333;
-        }
-
-        .timestamp {
-            color: #888;
-            font-size: 11px;
-        }
-
-        .light-theme .timestamp {
-            color: #666;
-        }
-
-        .verification-status {
-            color: #ff6b6b;
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        .verification-status.verified {
-            color: #51cf66;
-        }
-
-        .dropdown-arrow {
-            float: right;
-            margin-left: 10px;
-        }
-
-        .external-link {
-            color: #4a9eff;
-            text-decoration: none;
-            font-size: 11px;
-        }
-
-        .external-link:hover {
-            text-decoration: underline;
-        }
-
-        .status-indicator {
-            margin-left: 10px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        .status-loading {
-            background-color: #ffd700;
-            color: #1a1a1a;
-        }
-
-        .status-success {
-            background-color: #51cf66;
-            color: #fff;
-        }
-
-        .status-error {
-            background-color: #ff6b6b;
-            color: #fff;
         }
 
         .empty-state {
@@ -481,15 +392,51 @@
         .empty-state p {
             margin-bottom: 20px;
         }
+
+        .stats-container {
+            display: flex;
+            gap: 20px;
+            margin-left: 10px;
+        }
+
+        .stat-item {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .light-theme .stat-value {
+            color: #333;
+        }
+
+        .verified-count {
+            color: #51cf66;
+        }
+
+        .unverified-count {
+            color: #ff6b6b;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="header-left">
             <div class="header-title">
-                📊 Processed Data
+                📊 Secret Scanner Results
             </div>
             <div class="header-subtitle" id="dataInfo">No data loaded. Please import a JSON file.</div>
+            <div class="stats-container" id="statsContainer" style="display: none;">
+                <div class="stat-item">
+                    Verified: <span class="stat-value verified-count" id="verifiedCount">0</span>
+                </div>
+                <div class="stat-item">
+                    Unverified: <span class="stat-value unverified-count" id="unverifiedCount">0</span>
+                </div>
+            </div>
         </div>
         <div class="header-right">
             <div class="file-input-container">
@@ -501,10 +448,9 @@
             <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
                 🌙 Dark Mode
             </button>
-            <div class="checkbox-container">
-                <input type="checkbox" class="checkbox" id="hidePrivate">
-                <label for="hidePrivate">🔗 Hide private data</label>
-            </div>
+            <button class="btn" onclick="clearData()">
+                🗑️ Clear Data
+            </button>
             <button class="btn" onclick="exportData()">
                 📥 Export
             </button>
@@ -512,7 +458,6 @@
                 <input type="text" class="search-input" placeholder="Global search..." id="globalSearch">
                 <span class="search-icon">🔍</span>
             </div>
-            <div class="dropdown-arrow">⌄</div>
         </div>
     </div>
 
@@ -534,35 +479,26 @@
                         <th width="40">
                             <input type="checkbox" class="checkbox" id="selectAll">
                         </th>
-                        <th class="sortable" onclick="sortTable(1)">
-                            GH Archive ↕
-                            <br><input type="text" class="filter-input" placeholder="Filter archive..." onclick="event.stopPropagation()">
+                        <th class="sortable" onclick="sortTable(1)" data-column="repo_name">
+                            Repository
+                            <input type="text" class="filter-input" placeholder="Filter repo..." onclick="event.stopPropagation()" onkeyup="filterTable()">
                         </th>
-                        <th class="sortable" onclick="sortTable(2)">
-                            Repository ↕
-                            <br><input type="text" class="filter-input" placeholder="Filter repo..." onclick="event.stopPropagation()">
+                        <th class="sortable" onclick="sortTable(2)" data-column="author_name">
+                            Author
+                            <input type="text" class="filter-input" placeholder="Filter author..." onclick="event.stopPropagation()" onkeyup="filterTable()">
                         </th>
-                        <th class="sortable" onclick="sortTable(3)">
-                            Author ↕
-                            <br><input type="text" class="filter-input" placeholder="Filter author..." onclick="event.stopPropagation()">
+                        <th class="sortable" onclick="sortTable(3)" data-column="commit">
+                            Commit
+                            <input type="text" class="filter-input" placeholder="Filter commit..." onclick="event.stopPropagation()" onkeyup="filterTable()">
                         </th>
-                        <th class="sortable" onclick="sortTable(4)">
-                            Commit ↕
-                            <br><input type="text" class="filter-input" placeholder="Filter commit..." onclick="event.stopPropagation()">
+                        <th class="sortable" onclick="sortTable(4)" data-column="file_name">
+                            Filename
+                            <input type="text" class="filter-input" placeholder="Filter filename..." onclick="event.stopPropagation()" onkeyup="filterTable()">
                         </th>
-                        <th class="sortable" onclick="sortTable(5)">
-                            Filename ↕
-                            <br><input type="text" class="filter-input" placeholder="Filter filename..." onclick="event.stopPropagation()">
+                        <th class="sortable" onclick="sortTable(5)" data-column="verified">
+                            Verified
+                            <input type="text" class="filter-input" placeholder="Filter verified..." onclick="event.stopPropagation()" onkeyup="filterTable()">
                         </th>
-                        <th class="sortable" onclick="sortTable(6)">
-                            Secret ↕
-                            <br><input type="text" class="filter-input" placeholder="Filter secret..." onclick="event.stopPropagation()">
-                        </th>
-                        <th class="sortable" onclick="sortTable(7)">
-                            Detector ↕
-                            <br><input type="text" class="filter-input" placeholder="Filter detector..." onclick="event.stopPropagation()">
-                        </th>
-                        <th width="80">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -576,6 +512,17 @@
         let secretsData = [];
         let filteredData = [];
         let currentTheme = 'dark';
+        let sortDirection = {};
+
+        // Initialize theme from saved preference
+        function initializeTheme() {
+            const savedTheme = JSON.parse(localStorage.getItem('secretScanner_theme') || '"dark"');
+            currentTheme = savedTheme;
+            if (currentTheme === 'light') {
+                document.body.classList.add('light-theme');
+                document.getElementById('themeToggle').textContent = '☀️ Light Mode';
+            }
+        }
 
         // Theme toggle functionality
         function toggleTheme() {
@@ -591,6 +538,9 @@
                 themeToggle.textContent = '🌙 Dark Mode';
                 currentTheme = 'dark';
             }
+            
+            // Save theme preference
+            localStorage.setItem('secretScanner_theme', JSON.stringify(currentTheme));
         }
 
         // File import functionality
@@ -612,6 +562,8 @@
                 try {
                     const jsonData = JSON.parse(e.target.result);
                     loadData(jsonData);
+                    // Save data to browser storage
+                    localStorage.setItem('secretScanner_data', JSON.stringify(jsonData));
                     updateDataInfo(jsonData.length);
                     showTable();
                 } catch (error) {
@@ -623,22 +575,24 @@
 
         function loadData(data) {
             secretsData = data.map(item => ({
-                detector: item.detector || 'Unknown',
-                decoder: item.decoder || 'PLAIN',
-                raw_secret: item.raw_secret || '',
-                repo_url: item.repo_url || '',
-                commit: item.commit || '',
-                email: item.email || '',
-                file_path: item.file_path || '',
-                timestamp: item.timestamp || '',
-                commit_url: item.commit_url || '',
-                verified: item.verified || false,
+                repo_name: extractRepoName(item.repo_url),
                 author_name: extractAuthorName(item.email),
-                author_email: extractAuthorEmail(item.email)
+                commit: item.commit || '',
+                file_name: extractFileName(item.file_path),
+                verified: item.verified || false,
+                commit_url: item.commit_url || '',
+                repo_url: item.repo_url || '',
+                file_path: item.file_path || ''
             }));
             
             filteredData = [...secretsData];
             populateTable();
+            updateStats();
+        }
+
+        function extractRepoName(url) {
+            if (!url) return 'Unknown';
+            return url.split('/').pop() || 'Unknown';
         }
 
         function extractAuthorName(email) {
@@ -647,15 +601,23 @@
             return match ? match[1].trim() : email.split('@')[0];
         }
 
-        function extractAuthorEmail(email) {
-            if (!email) return '';
-            const match = email.match(/<([^>]+)>/);
-            return match ? match[1] : email;
+        function extractFileName(path) {
+            if (!path) return 'Unknown';
+            return path.split('/').pop() || 'Unknown';
         }
 
         function updateDataInfo(count) {
             const dataInfo = document.getElementById('dataInfo');
-            dataInfo.textContent = `Found ${count} secret detections. Showing ${count} results.`;
+            dataInfo.textContent = `Loaded ${count} secret detections. Showing ${filteredData.length} results.`;
+        }
+
+        function updateStats() {
+            const verifiedCount = secretsData.filter(item => item.verified).length;
+            const unverifiedCount = secretsData.length - verifiedCount;
+            
+            document.getElementById('verifiedCount').textContent = verifiedCount;
+            document.getElementById('unverifiedCount').textContent = unverifiedCount;
+            document.getElementById('statsContainer').style.display = 'flex';
         }
 
         function showTable() {
@@ -670,63 +632,92 @@
             filteredData.forEach((item, index) => {
                 const row = document.createElement('tr');
                 
-                // Extract repository name from URL
-                const repoName = item.repo_url.split('/').pop() || 'Unknown';
-                
                 // Shorten commit hash for display
                 const shortCommit = item.commit.substring(0, 8);
                 
-                // Extract filename from path
-                const filename = item.file_path.split('/').pop() || 'Unknown';
-                
-                // Format timestamp
-                const date = new Date(item.timestamp);
-                const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-                
-                // Truncate secret for display
-                const displaySecret = item.raw_secret.length > 30 ? 
-                    item.raw_secret.substring(0, 30) + '...' : 
-                    item.raw_secret;
-                
                 row.innerHTML = `
                     <td><input type="checkbox" class="checkbox"></td>
-                    <td><a href="#" class="archive-link">19-${String(index + 1).padStart(8, '0')}</a></td>
-                    <td><a href="${item.repo_url}" class="external-link" target="_blank">${repoName}</a></td>
-                    <td>
-                        <div class="author-info">
-                            <div class="author-name">${item.author_name}</div>
-                            <div class="author-email">${item.author_email}</div>
-                        </div>
-                    </td>
+                    <td><a href="${item.repo_url}" class="repo-name" target="_blank">${item.repo_name}</a></td>
+                    <td><span class="author-name">${item.author_name}</span></td>
                     <td><a href="${item.commit_url}" class="commit-hash" target="_blank">${shortCommit}</a></td>
-                    <td><a href="${item.commit_url}" class="filename" target="_blank">${filename}</a></td>
-                    <td><code class="secret-value">${displaySecret}</code></td>
-                    <td><span class="detector-badge">${item.detector.toUpperCase()}</span></td>
-                    <td><button class="actions-btn" onclick="showActions(${index})">👁️</button></td>
+                    <td><a href="${item.commit_url}" class="filename" target="_blank">${item.file_name}</a></td>
+                    <td><span class="verification-status ${item.verified ? 'verified' : 'not-verified'}">${item.verified ? 'Yes' : 'No'}</span></td>
                 `;
                 
                 tbody.appendChild(row);
             });
         }
 
-        function showActions(index) {
-            const item = filteredData[index];
-            alert(`Secret Details:\n\nDetector: ${item.detector}\nDecoder: ${item.decoder}\nVerified: ${item.verified ? 'Yes' : 'No'}\nTimestamp: ${item.timestamp}\nFile: ${item.file_path}\nSecret: ${item.raw_secret}`);
-        }
-
         function sortTable(columnIndex) {
-            // Basic sorting implementation
-            const table = document.getElementById('secretsTable');
-            const rows = Array.from(table.rows).slice(1); // Skip header
+            const columns = ['', 'repo_name', 'author_name', 'commit', 'file_name', 'verified'];
+            const column = columns[columnIndex];
             
-            rows.sort((a, b) => {
-                const aVal = a.cells[columnIndex].textContent.trim();
-                const bVal = b.cells[columnIndex].textContent.trim();
-                return aVal.localeCompare(bVal);
+            // Toggle sort direction
+            if (!sortDirection[column]) {
+                sortDirection[column] = 'asc';
+            } else if (sortDirection[column] === 'asc') {
+                sortDirection[column] = 'desc';
+            } else {
+                sortDirection[column] = 'asc';
+            }
+            
+            // Update visual indicators
+            document.querySelectorAll('.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
             });
             
-            const tbody = table.tBodies[0];
-            rows.forEach(row => tbody.appendChild(row));
+            const currentTh = document.querySelectorAll('.sortable')[columnIndex - 1];
+            currentTh.classList.add(sortDirection[column] === 'asc' ? 'sort-asc' : 'sort-desc');
+            
+            // Sort the data
+            filteredData.sort((a, b) => {
+                let aVal = a[column];
+                let bVal = b[column];
+                
+                if (column === 'verified') {
+                    aVal = aVal ? 1 : 0;
+                    bVal = bVal ? 1 : 0;
+                }
+                
+                if (sortDirection[column] === 'asc') {
+                    return aVal > bVal ? 1 : -1;
+                } else {
+                    return aVal < bVal ? 1 : -1;
+                }
+            });
+            
+            populateTable();
+        }
+
+        function filterTable() {
+            const filters = Array.from(document.querySelectorAll('.filter-input')).map(input => input.value.toLowerCase());
+            const columns = ['repo_name', 'author_name', 'commit', 'file_name', 'verified'];
+            
+            filteredData = secretsData.filter(item => {
+                return filters.every((filter, index) => {
+                    if (!filter) return true;
+                    let value = item[columns[index]];
+                    if (columns[index] === 'verified') {
+                        value = value ? 'yes' : 'no';
+                    }
+                    return String(value).toLowerCase().includes(filter);
+                });
+            });
+            
+            populateTable();
+            updateDataInfo(secretsData.length);
+        }
+
+        function clearData() {
+            if (confirm('Are you sure you want to clear all data?')) {
+                secretsData = [];
+                filteredData = [];
+                localStorage.removeItem('secretScanner_data');
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('secretsTable').style.display = 'none';
+                document.getElementById('statsContainer').style.display = 'none';
+                document.getElementById('dataInfo').textContent = 'No data loaded. Please import a JSON file.';
+            }
         }
 
         function exportData() {
@@ -760,12 +751,29 @@
             }
             
             populateTable();
-            updateDataInfo(filteredData.length);
+            updateDataInfo(secretsData.length);
         });
+
+        // Load saved data on page load
+        function loadSavedData() {
+            const savedData = localStorage.getItem('secretScanner_data');
+            if (savedData) {
+                try {
+                    const jsonData = JSON.parse(savedData);
+                    loadData(jsonData);
+                    updateDataInfo(jsonData.length);
+                    showTable();
+                } catch (error) {
+                    console.error('Error loading saved data:', error);
+                }
+            }
+        }
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
+            initializeTheme();
             setupFileInput();
+            loadSavedData();
         });
     </script>
 </body>
