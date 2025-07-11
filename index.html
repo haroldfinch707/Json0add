@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSON Data Viewer & Reporter</title>
+    <title>Minimalist JSON Reporter</title>
     <style>
         :root {
-            --bg-color: #1a1a1a;
+            --bg-color: #121212;
+            --card-bg-color: #1e1e1e;
             --text-color: #e0e0e0;
+            --text-muted-color: #888;
             --primary-color: #3a7bfd;
-            --card-bg-color: #252525;
-            --border-color: #444;
-            --hover-bg-color: #333;
-            --selected-bg-color: #3a7bfd33;
+            --border-color: #333;
+            --hover-bg-color: #2a2a2a;
             --success-color: #28a745;
         }
 
@@ -22,6 +22,7 @@
             color: var(--text-color);
             margin: 0;
             padding: 2rem;
+            box-sizing: border-box;
         }
 
         .container {
@@ -33,13 +34,14 @@
         h1 {
             text-align: center;
             font-weight: 500;
+            margin-bottom: 2rem;
         }
 
         /* --- File Import --- */
         .file-importer {
             text-align: center;
             border: 2px dashed var(--border-color);
-            padding: 1.5rem;
+            padding: 2rem;
             border-radius: 8px;
             margin-bottom: 2rem;
             background-color: var(--card-bg-color);
@@ -53,75 +55,71 @@
         #jsonFileInput { display: none; }
 
         /* --- Table for results --- */
-        .table-wrapper {
-            max-height: 40vh;
-            overflow-y: auto;
+        .results-container {
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            margin-bottom: 2rem;
+            overflow: hidden;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-        th, td {
-            padding: 0.8rem 1rem;
-            text-align: left;
+        .result-item {
+            background-color: var(--card-bg-color);
             border-bottom: 1px solid var(--border-color);
         }
-        thead th {
-            background-color: var(--card-bg-color);
-            position: sticky;
-            top: 0;
-            z-index: 10;
+        .result-item:last-child {
+            border-bottom: none;
         }
-        tbody tr {
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
             cursor: pointer;
             transition: background-color 0.2s;
         }
-        tbody tr:hover {
+        .result-header:hover {
             background-color: var(--hover-bg-color);
         }
-        tbody tr.selected {
-            background-color: var(--selected-bg-color);
+        .result-item.active .result-header {
+            background-color: #2c2c2e;
         }
-        tbody tr:last-child td {
-            border-bottom: none;
+        .result-header span {
+            flex: 1;
+            padding: 0 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+        .result-header span:first-child { padding-left: 0; }
+        .result-header span:last-child { text-align: right; padding-right: 0; }
+        .result-header .repo { color: var(--text-muted-color); }
 
-        /* --- Form & Report Button --- */
-        .form-card {
-            background-color: var(--card-bg-color);
-            padding: 2rem;
-            border-radius: 8px;
-        }
-        .form-group { margin-bottom: 1.5rem; }
-        .form-group:last-child { margin-bottom: 0; }
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 0.8rem;
+        .result-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, padding 0.4s ease-out;
             background-color: var(--bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            color: var(--text-color);
-            font-size: 1rem;
-            box-sizing: border-box;
-            transition: border-color 0.3s;
+            padding: 0 1.5rem;
         }
-        input[type="text"]:focus {
-            outline: none;
-            border-color: var(--primary-color);
+        .result-item.active .result-details {
+            max-height: 500px; /* Large enough for content */
+            padding: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+        .detail-group { margin-bottom: 1rem; }
+        .detail-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted-color);
+            margin-bottom: 0.25rem;
+        }
+        .detail-group p {
+            margin: 0;
+            padding: 0.5rem;
+            background-color: #2a2a2a;
+            border-radius: 4px;
+            font-family: monospace;
+            word-wrap: break-word;
         }
         
         #createReportBtn {
-            display: none; /* Hidden by default */
             width: 100%;
             padding: 0.8rem;
             font-size: 1rem;
@@ -131,12 +129,10 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            margin-top: 1.5rem;
+            margin-top: 1rem;
             transition: background-color 0.3s;
         }
-        #createReportBtn:hover {
-            background-color: #2d68d7;
-        }
+        #createReportBtn:hover { background-color: #2d68d7; }
 
         /* --- Modal --- */
         .modal {
@@ -171,16 +167,14 @@
             font-weight: bold;
             cursor: pointer;
         }
-        .close-btn:hover, .close-btn:focus {
-            color: var(--text-color);
-        }
+        .close-btn:hover, .close-btn:focus { color: var(--text-color); }
         #reportOutput {
             background-color: var(--bg-color);
             border: 1px solid var(--border-color);
             border-radius: 5px;
             padding: 1rem;
             min-height: 300px;
-            white-space: pre-wrap; /* To respect newlines in markdown */
+            white-space: pre-wrap;
             font-family: monospace;
         }
         #copyReportBtn {
@@ -195,47 +189,20 @@
             margin-top: 1rem;
             transition: background-color 0.3s;
         }
-        #copyReportBtn:hover {
-            background-color: #218838;
-        }
+        #copyReportBtn:hover { background-color: #218838; }
 
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>JSON Data Viewer & Reporter</h1>
+        <h1>Minimalist JSON Reporter</h1>
 
         <label for="jsonFileInput" class="file-importer">Click to Import JSON File</label>
         <input type="file" id="jsonFileInput" accept=".json">
         
-        <div class="table-wrapper">
-            <table id="resultsTable">
-                <thead>
-                    <tr>
-                        <th>Detector</th>
-                        <th>Repository</th>
-                        <th>File Path</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-        
-        <div class="form-card">
-            <div class="form-group">
-                <label for="rew_secret">Secret (raw_secret)</label>
-                <input type="text" id="rew_secret" readonly>
-            </div>
-            <div class="form-group">
-                <label for="repo_url">Repo URL</label>
-                <input type="text" id="repo_url" readonly>
-            </div>
-            <div class="form-group">
-                <label for="commit_url">Commit URL</label>
-                <input type="text" id="commit_url" readonly>
-            </div>
-            <button id="createReportBtn">Create Report</button>
+        <div class="results-container" id="resultsContainer">
+            <!-- JS will populate this -->
         </div>
     </div>
 
@@ -253,110 +220,82 @@
         document.addEventListener('DOMContentLoaded', () => {
             // --- Element References ---
             const fileInput = document.getElementById('jsonFileInput');
-            const tableBody = document.querySelector('#resultsTable tbody');
-            const createReportBtn = document.getElementById('createReportBtn');
+            const resultsContainer = document.getElementById('resultsContainer');
             const modal = document.getElementById('reportModal');
             const closeModalBtn = document.querySelector('.close-btn');
             const reportOutput = document.getElementById('reportOutput');
             const copyReportBtn = document.getElementById('copyReportBtn');
-            const inputs = {
-                secret: document.getElementById('rew_secret'),
-                repo: document.getElementById('repo_url'),
-                commit: document.getElementById('commit_url')
-            };
 
             // --- State ---
             let allData = [];
             let selectedItem = null;
 
             // --- Functions ---
-
-            /**
-             * Generates the markdown report template.
-             * @param {object} item - The selected data item.
-             * @returns {string} - The formatted markdown string.
-             */
             const generateReportTemplate = (item) => {
                 if (!item) return "No item selected.";
                 return `
 # Security Vulnerability Report: Hardcoded Secret Detected
-
 ## Summary
-A hardcoded secret was discovered in the Github commit, posing a potential security risk. This allows for unauthorized access to sensitive resources.
-
+A hardcoded secret was discovered in the codebase, posing a potential security risk. This allows for unauthorized access to sensitive resources.
 ## Vulnerability Details
-- **Vulnerability Type:** Sensitive secret
+- **Vulnerability Type:** Hardcoded Secret
 - **Detector:** ${item.detector || 'N/A'}
-
 ## Location of the Finding
 The hardcoded secret was found at the following location:
-
 - **Repository URL:** \`${item.repo_url || 'N/A'}\`
 - **Commit URL:** \`${item.commit_url || 'N/A'}\`
 - **File Path:** \`${item.file_path || 'N/A'}\`
-
 ## The Secret
 The following secret was identified:
-
 \`\`\`
 ${item.raw_secret || 'N/A'}
 \`\`\`
-
 ## Impact
 Exposure of this secret could lead to unauthorized access to services, data breaches, and potential system compromise.
-
 ## Recommended Remediation
-**Invalidate the Leaked Secret:** Immediately revoke or change the exposed credential.
-
+1.  **Invalidate the Leaked Secret:** Immediately revoke or change the exposed credential.
+2.  **Remove from History:** Purge the secret from the entire Git history to prevent discovery.
+3.  **Use a Secrets Manager:** Store secrets securely using a service like AWS Secrets Manager, HashiCorp Vault, or GitHub Secrets.
                 `.trim();
             };
-
-            /**
-             * Populates the form fields with data from the selected item.
-             * @param {object | null} item - The selected data item.
-             */
-            const populateForm = (item) => {
-                selectedItem = item;
-                inputs.secret.value = item?.raw_secret || '';
-                inputs.repo.value = item?.repo_url || '';
-                inputs.commit.value = item?.commit_url || '';
-                // Show or hide the report button based on selection
-                createReportBtn.style.display = item ? 'block' : 'none';
-            };
             
-            /**
-             * Renders the data table.
-             * @param {Array} data - The array of data items.
-             * @param {number} selectedIndex - The index of the currently selected item.
-             */
-            const renderTable = (data, selectedIndex = -1) => {
-                tableBody.innerHTML = ''; // Clear previous results
+            const renderResults = (data, activeIndex = -1) => {
+                resultsContainer.innerHTML = ''; // Clear previous results
                 data.forEach((item, index) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${item.detector || 'N/A'}</td>
-                        <td>${item.repo_url || 'N/A'}</td>
-                        <td>${item.file_path || 'N/A'}</td>
-                    `;
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'result-item';
+                    itemDiv.dataset.index = index;
                     
-                    if (index === selectedIndex) {
-                        row.classList.add('selected');
+                    if (index === activeIndex) {
+                        itemDiv.classList.add('active');
                     }
 
-                    row.addEventListener('click', () => {
-                        populateForm(item);
-                        document.querySelectorAll('#resultsTable tbody tr').forEach(r => r.classList.remove('selected'));
-                        row.classList.add('selected');
-                        localStorage.setItem('selected_index', index);
-                    });
-
-                    tableBody.appendChild(row);
+                    itemDiv.innerHTML = `
+                        <div class="result-header">
+                            <span>${item.detector || 'N/A'}</span>
+                            <span class="repo">${item.repo_url || 'N/A'}</span>
+                            <span>${item.file_path || 'N/A'}</span>
+                        </div>
+                        <div class="result-details">
+                            <div class="detail-group">
+                                <label>Secret (raw_secret)</label>
+                                <p>${item.raw_secret || 'N/A'}</p>
+                            </div>
+                            <div class="detail-group">
+                                <label>Repo URL</label>
+                                <p>${item.repo_url || 'N/A'}</p>
+                            </div>
+                            <div class="detail-group">
+                                <label>Commit URL</label>
+                                <p>${item.commit_url || 'N/A'}</p>
+                            </div>
+                            <button class="createReportBtn">Create Report</button>
+                        </div>
+                    `;
+                    resultsContainer.appendChild(itemDiv);
                 });
             };
 
-            /**
-             * Handles the file import process.
-             */
             const handleFileSelect = (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -368,13 +307,12 @@ Exposure of this secret could lead to unauthorized access to services, data brea
                         allData = Array.isArray(jsonData) ? jsonData : [jsonData];
                         
                         localStorage.setItem('json_data', JSON.stringify(allData));
-                        localStorage.removeItem('selected_index');
+                        localStorage.removeItem('active_index');
 
-                        renderTable(allData);
-                        populateForm(null); // Clear form
+                        renderResults(allData);
+                        selectedItem = null;
 
                     } catch (error) {
-                        // Use a more user-friendly modal for errors
                         alert('Error parsing JSON file. Please check the file format.');
                         console.error("JSON Parse Error:", error);
                     }
@@ -382,19 +320,16 @@ Exposure of this secret could lead to unauthorized access to services, data brea
                 reader.readAsText(file);
             };
 
-            /**
-             * Loads data and selection state from localStorage on page start.
-             */
             const loadFromStorage = () => {
                 const storedData = localStorage.getItem('json_data');
                 if (storedData) {
                     allData = JSON.parse(storedData);
-                    const selectedIndex = parseInt(localStorage.getItem('selected_index'), 10);
+                    const activeIndex = parseInt(localStorage.getItem('active_index'), 10);
                     
-                    renderTable(allData, selectedIndex);
+                    renderResults(allData, activeIndex);
 
-                    if (!isNaN(selectedIndex) && allData[selectedIndex]) {
-                        populateForm(allData[selectedIndex]);
+                    if (!isNaN(activeIndex) && allData[activeIndex]) {
+                        selectedItem = allData[activeIndex];
                     }
                 }
             };
@@ -402,49 +337,51 @@ Exposure of this secret could lead to unauthorized access to services, data brea
             // --- Event Listeners ---
             fileInput.addEventListener('change', handleFileSelect);
 
-            createReportBtn.addEventListener('click', () => {
-                if (selectedItem) {
-                    reportOutput.textContent = generateReportTemplate(selectedItem);
-                    modal.style.display = 'flex';
+            resultsContainer.addEventListener('click', (event) => {
+                const header = event.target.closest('.result-header');
+                const reportButton = event.target.closest('.createReportBtn');
+
+                if (header) {
+                    const itemDiv = header.closest('.result-item');
+                    const index = parseInt(itemDiv.dataset.index, 10);
+                    
+                    // Toggle active state
+                    if (itemDiv.classList.contains('active')) {
+                        itemDiv.classList.remove('active');
+                        selectedItem = null;
+                        localStorage.removeItem('active_index');
+                    } else {
+                        // Deactivate any other active items
+                        resultsContainer.querySelectorAll('.result-item.active').forEach(el => el.classList.remove('active'));
+                        
+                        itemDiv.classList.add('active');
+                        selectedItem = allData[index];
+                        localStorage.setItem('active_index', index);
+                    }
+                }
+
+                if (reportButton) {
+                    if (selectedItem) {
+                        reportOutput.textContent = generateReportTemplate(selectedItem);
+                        modal.style.display = 'flex';
+                    }
                 }
             });
 
-            closeModalBtn.addEventListener('click', () => {
-                modal.style.display = 'none';
-            });
-
-            window.addEventListener('click', (event) => {
-                if (event.target == modal) {
-                    modal.style.display = 'none';
-                }
-            });
+            closeModalBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+            window.addEventListener('click', (event) => { if (event.target == modal) modal.style.display = 'none'; });
 
             copyReportBtn.addEventListener('click', () => {
-                // Use the Clipboard API for modern browsers
                 navigator.clipboard.writeText(reportOutput.textContent).then(() => {
                     copyReportBtn.textContent = 'Copied!';
-                    copyReportBtn.style.backgroundColor = '#218838'; // Darker green
+                    copyReportBtn.style.backgroundColor = '#218838';
                     setTimeout(() => {
                         copyReportBtn.textContent = 'Copy to Clipboard';
-                        // FIX: Use the actual color value, not the CSS var() function syntax
                         copyReportBtn.style.backgroundColor = '#28a745'; 
                     }, 2000);
                 }).catch(err => {
                     console.error('Failed to copy text: ', err);
-                    // Fallback for older browsers
-                    try {
-                        const textArea = document.createElement("textarea");
-                        textArea.value = reportOutput.textContent;
-                        document.body.appendChild(textArea);
-                        textArea.focus();
-                        textArea.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(textArea);
-                        copyReportBtn.textContent = 'Copied!';
-                        setTimeout(() => { copyReportBtn.textContent = 'Copy to Clipboard'; }, 2000);
-                    } catch (e) {
-                        alert('Failed to copy report.');
-                    }
+                    alert('Failed to copy report.');
                 });
             });
             
