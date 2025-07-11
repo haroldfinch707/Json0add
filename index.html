@@ -1,237 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Security Findings Viewer</title>
   <style>
     :root {
-      --bg: #0d1117;
-      --card: #161b22;
-      --border: #30363d;
-      --text: #c9d1d9;
-      --primary: #58a6ff;
+      --bg: #0e1015;
+      --card: #1a1d23;
+      --border: #2a2e35;
+      --text: #e3e3e3;
+      --accent: #58a6ff;
       --success: #3fb950;
     }
-    * {
-      box-sizing: border-box;
-    }
+
     body {
       margin: 0;
-      padding: 2rem;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--bg);
+      font-family: Arial, sans-serif;
+      background: var(--bg);
       color: var(--text);
+      padding: 2rem;
     }
+
     h1 {
       text-align: center;
-      color: var(--primary);
+      color: var(--accent);
     }
-    .drop-zone {
-      border: 2px dashed var(--primary);
+
+    .upload-box {
+      border: 2px dashed var(--accent);
       padding: 2rem;
       text-align: center;
-      margin: 1rem auto;
-      max-width: 600px;
       cursor: pointer;
-      border-radius: 8px;
+      border-radius: 10px;
+      max-width: 600px;
+      margin: 0 auto 2rem auto;
       background: var(--card);
     }
+
+    input[type="file"] {
+      display: none;
+    }
+
     .finding {
       background: var(--card);
       border: 1px solid var(--border);
-      margin: 1rem auto;
-      max-width: 800px;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    .header {
-      padding: 1rem;
-      cursor: pointer;
-      font-weight: bold;
-      border-bottom: 1px solid var(--border);
-    }
-    .details {
-      display: none;
-      padding: 1rem;
-    }
-    .details p {
-      margin: 0.3rem 0;
-    }
-    .active .details {
-      display: block;
-    }
-    .report-btn {
-      background: var(--primary);
-      color: white;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-top: 1rem;
-    }
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.8);
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background: var(--card);
-      padding: 1.5rem;
       border-radius: 8px;
-      max-width: 600px;
-      width: 100%;
-      position: relative;
-    }
-    .modal-content textarea {
-      width: 100%;
-      height: 300px;
-      background: var(--bg);
-      color: var(--text);
-      border: 1px solid var(--border);
       padding: 1rem;
-      font-family: monospace;
-      resize: vertical;
+      margin: 1rem auto;
+      max-width: 700px;
+      transition: background 0.3s;
     }
-    .copy-btn {
-      margin-top: 1rem;
-      background: var(--success);
+
+    .finding:hover {
+      background: #22252d;
+    }
+
+    .finding p {
+      margin: 0.5rem 0;
+    }
+
+    .report-btn {
+      background-color: var(--accent);
       border: none;
       padding: 0.5rem 1rem;
+      margin-top: 1rem;
       color: white;
-      border-radius: 4px;
+      border-radius: 5px;
       cursor: pointer;
     }
-    .close {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      color: var(--text);
-      cursor: pointer;
-      font-size: 1.5rem;
+
+    .report-btn:active {
+      transform: scale(0.98);
+    }
+
+    .copied {
+      color: var(--success);
+      font-size: 0.9rem;
+      margin-left: 10px;
     }
   </style>
 </head>
 <body>
 
-<h1>Security Findings Viewer</h1>
-<div class="drop-zone" onclick="document.getElementById('fileInput').click();">
-  Click or Drag to Import JSON File
-</div>
-<input type="file" id="fileInput" style="display:none" accept=".json" />
+<h1>Security Report Tool</h1>
 
-<div id="findings"></div>
-
-<div class="modal" id="reportModal">
-  <div class="modal-content">
-    <span class="close" onclick="closeModal()">&times;</span>
-    <textarea id="markdownOutput" readonly></textarea>
-    <button class="copy-btn" onclick="copyMarkdown()">Copy to Clipboard</button>
-  </div>
+<div class="upload-box" onclick="document.getElementById('fileInput').click()">
+  Click or Drag a JSON File Here to Load Findings
 </div>
+<input type="file" id="fileInput" accept=".json" />
+
+<div id="results"></div>
 
 <script>
-  const findingsContainer = document.getElementById('findings');
-  const modal = document.getElementById('reportModal');
-  const markdownOutput = document.getElementById('markdownOutput');
-  let findingsData = [];
+  const input = document.getElementById("fileInput");
+  const results = document.getElementById("results");
+
+  let findings = [];
+
+  input.addEventListener("change", function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!Array.isArray(data)) throw "Invalid JSON";
+
+        findings = data;
+        localStorage.setItem("securityFindings", JSON.stringify(data));
+        renderFindings();
+      } catch (err) {
+        alert("Error: Invalid JSON file.");
+      }
+    };
+    reader.readAsText(file);
+  });
 
   function renderFindings() {
-    findingsContainer.innerHTML = '';
-    findingsData.forEach((item, index) => {
-      const div = document.createElement('div');
-      div.className = 'finding';
-      if (localStorage.getItem('lastOpen') == index) div.classList.add('active');
+    results.innerHTML = "";
 
-      const header = document.createElement('div');
-      header.className = 'header';
-      header.textContent = `${item.detector} — ${item.repo_url}`;
-      header.onclick = () => toggle(index);
+    findings.forEach((item, index) => {
+      const card = document.createElement("div");
+      card.className = "finding";
 
-      const details = document.createElement('div');
-      details.className = 'details';
-      details.innerHTML = `
-        <p><strong>Raw Secret:</strong> ${item.raw_secret}</p>
+      card.innerHTML = `
+        <p><strong>Detector:</strong> ${item.detector}</p>
         <p><strong>Repo URL:</strong> <a href="${item.repo_url}" target="_blank">${item.repo_url}</a></p>
         <p><strong>Commit URL:</strong> <a href="${item.commit_url}" target="_blank">${item.commit_url}</a></p>
-        <button class="report-btn" onclick="generateReport(${index})">Create Report</button>
+        <p><strong>Raw Secret:</strong><br><code>${item.raw_secret}</code></p>
+        <button class="report-btn" onclick="copyReport(${index}, this)">Copy Report</button>
+        <span class="copied" style="display:none;">Copied!</span>
       `;
 
-      div.appendChild(header);
-      div.appendChild(details);
-      findingsContainer.appendChild(div);
+      results.appendChild(card);
     });
   }
 
-  function toggle(index) {
-    document.querySelectorAll('.finding').forEach((el, i) => {
-      if (i === index) {
-        el.classList.toggle('active');
-        localStorage.setItem('lastOpen', el.classList.contains('active') ? index : -1);
-      } else {
-        el.classList.remove('active');
-      }
-    });
-  }
-
-  function generateReport(index) {
-    const item = findingsData[index];
-    const md = `## Security Finding: ${item.detector}
+  function copyReport(index, btn) {
+    const item = findings[index];
+    const report = `## Security Finding: ${item.detector}
 
 **Raw Secret**  
 \`\`\`
 ${item.raw_secret}
 \`\`\`
 
-**Repository URL**  
-${item.repo_url}
+**Repository URL:** ${item.repo_url}  
+**Commit URL:** ${item.commit_url}
 
-**Commit URL**  
-${item.commit_url}
+_Discovered via automated secret scanning tool._`;
 
-> This finding was discovered during automated secret scanning. Please review and remediate appropriately.
-`;
-    markdownOutput.value = md;
-    modal.style.display = 'flex';
+    navigator.clipboard.writeText(report).then(() => {
+      const copiedText = btn.nextElementSibling;
+      copiedText.style.display = "inline";
+      setTimeout(() => {
+        copiedText.style.display = "none";
+      }, 2000);
+    });
   }
 
-  function copyMarkdown() {
-    navigator.clipboard.writeText(markdownOutput.value);
-    alert('Copied to clipboard!');
-  }
-
-  function closeModal() {
-    modal.style.display = 'none';
-  }
-
-  document.getElementById('fileInput').addEventListener('change', function () {
-    const file = this.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      try {
-        const data = JSON.parse(e.target.result);
-        if (!Array.isArray(data)) throw 'Not an array';
-        findingsData = data;
-        localStorage.setItem('findings', JSON.stringify(data));
-        renderFindings();
-      } catch (err) {
-        alert('Invalid JSON file.');
-      }
-    };
-    reader.readAsText(file);
-  });
-
-  // On load
-  window.addEventListener('load', () => {
-    const saved = localStorage.getItem('findings');
+  // Load from localStorage if available
+  window.onload = () => {
+    const saved = localStorage.getItem("securityFindings");
     if (saved) {
-      findingsData = JSON.parse(saved);
+      findings = JSON.parse(saved);
       renderFindings();
     }
-  });
+  };
 </script>
 
 </body>
