@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Importer</title>
+    <title>JSON Data Viewer</title>
     <style>
-        /* --- Basic Setup & Dark Theme --- */
         :root {
             --bg-color: #1a1a1a;
             --text-color: #e0e0e0;
             --primary-color: #3a7bfd;
-            --input-bg-color: #2c2c2c;
+            --card-bg-color: #252525;
             --border-color: #444;
+            --hover-bg-color: #333;
+            --selected-bg-color: #3a7bfd33; /* Semi-transparent blue */
         }
 
         body {
@@ -19,41 +20,88 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            padding: 2rem;
         }
 
-        /* --- Main Container --- */
         .container {
             width: 100%;
-            max-width: 600px;
-            padding: 2rem;
-            background-color: var(--input-bg-color);
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            max-width: 900px;
+            margin: 0 auto;
         }
-
+        
         h1 {
             text-align: center;
-            margin-top: 0;
-            margin-bottom: 2rem;
             font-weight: 500;
         }
 
-        /* --- Form Styling --- */
-        .form-group {
-            margin-bottom: 1.5rem;
+        /* --- File Import --- */
+        .file-importer {
+            text-align: center;
+            border: 2px dashed var(--border-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            background-color: var(--card-bg-color);
+            cursor: pointer;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+        .file-importer:hover {
+            border-color: var(--primary-color);
+            background-color: var(--hover-bg-color);
+        }
+        #jsonFileInput { display: none; }
+
+        /* --- Table for results --- */
+        .table-wrapper {
+            max-height: 40vh; /* Limit height and make scrollable */
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 0.8rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        thead th {
+            background-color: var(--card-bg-color);
+            position: sticky;
+            top: 0;
+        }
+        tbody tr {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        tbody tr:hover {
+            background-color: var(--hover-bg-color);
+        }
+        tbody tr.selected {
+            background-color: var(--selected-bg-color);
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
         }
 
+        /* --- Form --- */
+        .form-card {
+            background-color: var(--card-bg-color);
+            padding: 2rem;
+            border-radius: 8px;
+        }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group:last-child { margin-bottom: 0; }
         label {
             display: block;
             margin-bottom: 0.5rem;
             font-size: 0.9rem;
             font-weight: 500;
         }
-
         input[type="text"] {
             width: 100%;
             padding: 0.8rem;
@@ -62,82 +110,101 @@
             border-radius: 5px;
             color: var(--text-color);
             font-size: 1rem;
-            box-sizing: border-box; /* Important for padding */
+            box-sizing: border-box;
             transition: border-color 0.3s;
         }
-
         input[type="text"]:focus {
             outline: none;
             border-color: var(--primary-color);
-        }
-        
-        /* --- File Import Button --- */
-        .file-importer {
-            text-align: center;
-            border: 2px dashed var(--border-color);
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            cursor: pointer;
-            transition: border-color 0.3s, background-color 0.3s;
-        }
-        
-        .file-importer:hover {
-            border-color: var(--primary-color);
-            background-color: #333;
-        }
-
-        #jsonFileInput {
-            display: none; /* Hide the default file input */
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>Data Importer</h1>
+        <h1>JSON Data Viewer</h1>
 
-        <label for="jsonFileInput" class="file-importer">
-            Click to Import JSON File
-        </label>
+        <label for="jsonFileInput" class="file-importer">Click to Import JSON File</label>
         <input type="file" id="jsonFileInput" accept=".json">
-
-        <div class="form-group">
-            <label for="rew_secret">Secret</label>
-            <input type="text" id="rew_secret" placeholder="e.g., https://user:pass@example.com">
+        
+        <div class="table-wrapper">
+            <table id="resultsTable">
+                <thead>
+                    <tr>
+                        <th>Detector</th>
+                        <th>Repository</th>
+                        <th>File Path</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
         </div>
-        <div class="form-group">
-            <label for="repo_url">Repo URL</label>
-            <input type="text" id="repo_url" placeholder="e.g., https://github.com/org/repo">
-        </div>
-        <div class="form-group">
-            <label for="commit_url">Commit URL</label>
-            <input type="text" id="commit_url" placeholder="e.g., https://github.com/org/repo/commit/...">
+        
+        <div class="form-card">
+            <div class="form-group">
+                <label for="rew_secret">Secret (raw_secret)</label>
+                <input type="text" id="rew_secret" readonly>
+            </div>
+            <div class="form-group">
+                <label for="repo_url">Repo URL</label>
+                <input type="text" id="repo_url" readonly>
+            </div>
+            <div class="form-group">
+                <label for="commit_url">Commit URL</label>
+                <input type="text" id="commit_url" readonly>
+            </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const fileInput = document.getElementById('jsonFileInput');
+            const tableBody = document.querySelector('#resultsTable tbody');
             const inputs = {
                 secret: document.getElementById('rew_secret'),
                 repo: document.getElementById('repo_url'),
                 commit: document.getElementById('commit_url')
             };
-            const fileInput = document.getElementById('jsonFileInput');
 
-            // 1. Load data from localStorage on page start
-            const loadFromStorage = () => {
-                inputs.secret.value = localStorage.getItem('rew_secret') || '';
-                inputs.repo.value = localStorage.getItem('repo_url') || '';
-                inputs.commit.value = localStorage.getItem('commit_url') || '';
+            let allData = [];
+
+            const populateForm = (item) => {
+                inputs.secret.value = item?.raw_secret || '';
+                inputs.repo.value = item?.repo_url || '';
+                inputs.commit.value = item?.commit_url || '';
+            };
+            
+            const renderTable = (data, selectedIndex = -1) => {
+                tableBody.innerHTML = ''; // Clear previous results
+                data.forEach((item, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.detector || 'N/A'}</td>
+                        <td>${item.repo_url || 'N/A'}</td>
+                        <td>${item.file_path || 'N/A'}</td>
+                    `;
+                    
+                    if (index === selectedIndex) {
+                        row.classList.add('selected');
+                    }
+
+                    row.addEventListener('click', () => {
+                        // Populate form with this item's data
+                        populateForm(item);
+                        
+                        // Update selection visual
+                        document.querySelectorAll('#resultsTable tbody tr').forEach(r => r.classList.remove('selected'));
+                        row.classList.add('selected');
+                        
+                        // Save selection for persistence
+                        localStorage.setItem('selected_index', index);
+                    });
+
+                    tableBody.appendChild(row);
+                });
             };
 
-            // 2. Save data to localStorage whenever an input changes
-            const saveToStorage = (key, value) => {
-                localStorage.setItem(key, value);
-            };
-
-            // 3. Handle file import
             const handleFileSelect = (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -146,39 +213,41 @@
                 reader.onload = (e) => {
                     try {
                         const jsonData = JSON.parse(e.target.result);
-                        // Assuming the JSON is an array of objects, use the first one
-                        const data = Array.isArray(jsonData) ? jsonData[0] : jsonData;
+                        allData = Array.isArray(jsonData) ? jsonData : [jsonData];
+                        
+                        // Save full data to localStorage
+                        localStorage.setItem('json_data', JSON.stringify(allData));
+                        localStorage.removeItem('selected_index'); // Reset selection
 
-                        if (data) {
-                            // Populate fields from JSON
-                            inputs.secret.value = data.raw_secret || '';
-                            inputs.repo.value = data.repo_url || '';
-                            inputs.commit.value = data.commit_url || '';
+                        renderTable(allData);
+                        // Clear form if a new file is loaded
+                        populateForm(null);
 
-                            // Persist the newly imported data
-                            saveToStorage('rew_secret', inputs.secret.value);
-                            saveToStorage('repo_url', inputs.repo.value);
-                            saveToStorage('commit_url', inputs.commit.value);
-                        }
                     } catch (error) {
-                        alert('Error parsing JSON file. Please check the file format.');
+                        alert('Error parsing JSON file.');
                         console.error("JSON Parse Error:", error);
                     }
                 };
                 reader.readAsText(file);
             };
+
+            const loadFromStorage = () => {
+                const storedData = localStorage.getItem('json_data');
+                if (storedData) {
+                    allData = JSON.parse(storedData);
+                    const selectedIndex = parseInt(localStorage.getItem('selected_index'), 10);
+                    
+                    renderTable(allData, selectedIndex);
+
+                    if (!isNaN(selectedIndex) && allData[selectedIndex]) {
+                        populateForm(allData[selectedIndex]);
+                    }
+                }
+            };
             
-            // --- Attach Event Listeners ---
-
-            // Save typed data
-            inputs.secret.addEventListener('keyup', () => saveToStorage('rew_secret', inputs.secret.value));
-            inputs.repo.addEventListener('keyup', () => saveToStorage('repo_url', inputs.repo.value));
-            inputs.commit.addEventListener('keyup', () => saveToStorage('commit_url', inputs.commit.value));
-
-            // Listen for file selection
             fileInput.addEventListener('change', handleFileSelect);
-
-            // --- Initial Load ---
+            
+            // Initial load from storage
             loadFromStorage();
         });
     </script>
