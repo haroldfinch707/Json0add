@@ -3,385 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSON Data Viewer</title>
+    <title>Data Importer</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* --- Basic Setup & Dark Theme --- */
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #3a7bfd;
+            --input-bg-color: #2c2c2c;
+            --border-color: #444;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #1a1a1a;
-            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             min-height: 100vh;
         }
 
+        /* --- Main Container --- */
         .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #333;
-        }
-
-        .title {
-            font-size: 24px;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        .controls {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s ease;
-            background-color: #2d2d2d;
-            color: #e0e0e0;
-            border: 1px solid #444;
-        }
-
-        .btn:hover {
-            background-color: #3d3d3d;
-            border-color: #555;
-        }
-
-        .btn-primary {
-            background-color: #0066cc;
-            border-color: #0066cc;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: #0052a3;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .stats {
-            background-color: #2d2d2d;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #444;
-        }
-
-        .table-container {
-            background-color: #2d2d2d;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #444;
-        }
-
-        .table {
             width: 100%;
-            border-collapse: collapse;
+            max-width: 600px;
+            padding: 2rem;
+            background-color: var(--input-bg-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
-        .table th,
-        .table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #444;
-        }
-
-        .table th {
-            background-color: #3d3d3d;
-            font-weight: 600;
-            color: #fff;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .table tr:hover {
-            background-color: #3d3d3d;
-        }
-
-        .secret-cell {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-width: 200px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .link {
-            color: #66b3ff;
-            text-decoration: none;
-        }
-
-        .link:hover {
-            text-decoration: underline;
-        }
-
-        .empty-state {
+        h1 {
             text-align: center;
-            padding: 60px 20px;
-            color: #888;
+            margin-top: 0;
+            margin-bottom: 2rem;
+            font-weight: 500;
         }
 
-        .empty-state h3 {
-            margin-bottom: 10px;
-            color: #aaa;
+        /* --- Form Styling --- */
+        .form-group {
+            margin-bottom: 1.5rem;
         }
 
-        .scroll-container {
-            max-height: 70vh;
-            overflow-y: auto;
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
         }
 
-        .scroll-container::-webkit-scrollbar {
-            width: 8px;
+        input[type="text"] {
+            width: 100%;
+            padding: 0.8rem;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            color: var(--text-color);
+            font-size: 1rem;
+            box-sizing: border-box; /* Important for padding */
+            transition: border-color 0.3s;
         }
 
-        .scroll-container::-webkit-scrollbar-track {
-            background: #2d2d2d;
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
         }
-
-        .scroll-container::-webkit-scrollbar-thumb {
-            background: #555;
-            border-radius: 4px;
-        }
-
-        .scroll-container::-webkit-scrollbar-thumb:hover {
-            background: #666;
-        }
-
-        .copy-btn {
-            background: none;
-            border: none;
-            color: #66b3ff;
+        
+        /* --- File Import Button --- */
+        .file-importer {
+            text-align: center;
+            border: 2px dashed var(--border-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
             cursor: pointer;
-            font-size: 12px;
-            margin-left: 8px;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+        
+        .file-importer:hover {
+            border-color: var(--primary-color);
+            background-color: #333;
         }
 
-        .copy-btn:hover {
-            color: #88ccff;
-        }
-
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background-color: #4caf50;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 6px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            z-index: 1000;
-        }
-
-        .toast.show {
-            opacity: 1;
+        #jsonFileInput {
+            display: none; /* Hide the default file input */
         }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <div class="header">
-            <h1 class="title">JSON Data Viewer</h1>
-            <div class="controls">
-                <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-                    Import JSON
-                </button>
-                <button class="btn" onclick="clearData()">Clear</button>
-                <button class="btn" onclick="exportData()">Export</button>
-            </div>
+        <h1>Data Importer</h1>
+
+        <label for="jsonFileInput" class="file-importer">
+            Click to Import JSON File
+        </label>
+        <input type="file" id="jsonFileInput" accept=".json">
+
+        <div class="form-group">
+            <label for="rew_secret">Secret</label>
+            <input type="text" id="rew_secret" placeholder="e.g., https://user:pass@example.com">
         </div>
-
-        <input type="file" id="fileInput" class="file-input" accept=".json" onchange="handleFileImport(event)">
-
-        <div class="stats" id="stats" style="display: none;">
-            <span id="recordCount">0 records</span>
+        <div class="form-group">
+            <label for="repo_url">Repo URL</label>
+            <input type="text" id="repo_url" placeholder="e.g., https://github.com/org/repo">
         </div>
-
-        <div class="table-container">
-            <div class="scroll-container">
-                <table class="table" id="dataTable">
-                    <thead>
-                        <tr>
-                            <th>Secret</th>
-                            <th>Repository</th>
-                            <th>Commit</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <!-- Data will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="empty-state" id="emptyState">
-            <h3>No data to display</h3>
-            <p>Import a JSON file to get started</p>
+        <div class="form-group">
+            <label for="commit_url">Commit URL</label>
+            <input type="text" id="commit_url" placeholder="e.g., https://github.com/org/repo/commit/...">
         </div>
     </div>
 
-    <div class="toast" id="toast"></div>
-
     <script>
-        let jsonData = [];
-
-        // Load data from memory on page load
-        window.addEventListener('load', function() {
-            loadStoredData();
-        });
-
-        function loadStoredData() {
-            // Try to load from window object (session storage alternative)
-            if (window.storedJsonData) {
-                jsonData = window.storedJsonData;
-                renderTable();
-            }
-        }
-
-        function storeData() {
-            // Store in window object to persist during session
-            window.storedJsonData = jsonData;
-        }
-
-        function handleFileImport(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (Array.isArray(data)) {
-                        jsonData = data;
-                    } else {
-                        jsonData = [data];
-                    }
-                    storeData();
-                    renderTable();
-                    showToast('JSON file imported successfully!');
-                } catch (error) {
-                    showToast('Error parsing JSON file: ' + error.message);
-                }
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputs = {
+                secret: document.getElementById('rew_secret'),
+                repo: document.getElementById('repo_url'),
+                commit: document.getElementById('commit_url')
             };
-            reader.readAsText(file);
-        }
+            const fileInput = document.getElementById('jsonFileInput');
 
-        function renderTable() {
-            const tableBody = document.getElementById('tableBody');
-            const emptyState = document.getElementById('emptyState');
-            const stats = document.getElementById('stats');
+            // 1. Load data from localStorage on page start
+            const loadFromStorage = () => {
+                inputs.secret.value = localStorage.getItem('rew_secret') || '';
+                inputs.repo.value = localStorage.getItem('repo_url') || '';
+                inputs.commit.value = localStorage.getItem('commit_url') || '';
+            };
+
+            // 2. Save data to localStorage whenever an input changes
+            const saveToStorage = (key, value) => {
+                localStorage.setItem(key, value);
+            };
+
+            // 3. Handle file import
+            const handleFileSelect = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const jsonData = JSON.parse(e.target.result);
+                        // Assuming the JSON is an array of objects, use the first one
+                        const data = Array.isArray(jsonData) ? jsonData[0] : jsonData;
+
+                        if (data) {
+                            // Populate fields from JSON
+                            inputs.secret.value = data.raw_secret || '';
+                            inputs.repo.value = data.repo_url || '';
+                            inputs.commit.value = data.commit_url || '';
+
+                            // Persist the newly imported data
+                            saveToStorage('rew_secret', inputs.secret.value);
+                            saveToStorage('repo_url', inputs.repo.value);
+                            saveToStorage('commit_url', inputs.commit.value);
+                        }
+                    } catch (error) {
+                        alert('Error parsing JSON file. Please check the file format.');
+                        console.error("JSON Parse Error:", error);
+                    }
+                };
+                reader.readAsText(file);
+            };
             
-            if (jsonData.length === 0) {
-                tableBody.innerHTML = '';
-                emptyState.style.display = 'block';
-                stats.style.display = 'none';
-                return;
-            }
+            // --- Attach Event Listeners ---
 
-            emptyState.style.display = 'none';
-            stats.style.display = 'block';
-            document.getElementById('recordCount').textContent = `${jsonData.length} records`;
+            // Save typed data
+            inputs.secret.addEventListener('keyup', () => saveToStorage('rew_secret', inputs.secret.value));
+            inputs.repo.addEventListener('keyup', () => saveToStorage('repo_url', inputs.repo.value));
+            inputs.commit.addEventListener('keyup', () => saveToStorage('commit_url', inputs.commit.value));
 
-            tableBody.innerHTML = '';
-            
-            jsonData.forEach((item, index) => {
-                const row = document.createElement('tr');
-                
-                // Extract the required fields
-                const secret = item.raw_secret || item.Raw || '';
-                const repoUrl = item.repo_url || item.RepoUrl || '';
-                const commitUrl = item.commit_url || item.CommitUrl || '';
-                
-                row.innerHTML = `
-                    <td class="secret-cell">
-                        <span title="${secret}">${secret.substring(0, 50)}${secret.length > 50 ? '...' : ''}</span>
-                        <button class="copy-btn" onclick="copyToClipboard('${secret.replace(/'/g, "\\'")}')">Copy</button>
-                    </td>
-                    <td>
-                        ${repoUrl ? `<a href="${repoUrl}" target="_blank" class="link">${repoUrl}</a>` : 'N/A'}
-                    </td>
-                    <td>
-                        ${commitUrl ? `<a href="${commitUrl}" target="_blank" class="link">${commitUrl}</a>` : 'N/A'}
-                    </td>
-                `;
-                
-                tableBody.appendChild(row);
-            });
-        }
+            // Listen for file selection
+            fileInput.addEventListener('change', handleFileSelect);
 
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                showToast('Copied to clipboard!');
-            }).catch(err => {
-                showToast('Failed to copy to clipboard');
-            });
-        }
-
-        function clearData() {
-            if (confirm('Are you sure you want to clear all data?')) {
-                jsonData = [];
-                delete window.storedJsonData;
-                renderTable();
-                showToast('Data cleared successfully!');
-            }
-        }
-
-        function exportData() {
-            if (jsonData.length === 0) {
-                showToast('No data to export');
-                return;
-            }
-
-            const dataStr = JSON.stringify(jsonData, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'exported_data.json';
-            link.click();
-            
-            URL.revokeObjectURL(url);
-            showToast('Data exported successfully!');
-        }
-
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.add('show');
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-
-        // Initialize with sample data if available
-        if (typeof window !== 'undefined' && !window.storedJsonData) {
-            // You can uncomment this to load sample data
-            // jsonData = [/* your sample data here */];
-            // storeData();
-            // renderTable();
-        }
+            // --- Initial Load ---
+            loadFromStorage();
+        });
     </script>
+
 </body>
 </html>
