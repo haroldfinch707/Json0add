@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secret Scanner - Processed Data</title>
+    <title>Secrets Analyzer</title>
     <style>
         * {
             margin: 0;
@@ -11,498 +11,375 @@
             box-sizing: border-box;
         }
 
-        /* Dark Theme (Default) */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #1a1a1a;
-            color: #ffffff;
-            font-size: 13px;
-            line-height: 1.4;
-            transition: all 0.3s ease;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 20px;
         }
 
-        /* Light Theme */
-        body.light-theme {
-            background-color: #ffffff;
-            color: #333333;
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(30, 41, 59, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
         }
 
         .header {
-            background-color: #2d2d2d;
-            padding: 12px 20px;
-            border-bottom: 1px solid #404040;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: all 0.3s ease;
-        }
-
-        .light-theme .header {
-            background-color: #f5f5f5;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .header-title {
-            font-size: 16px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .header-subtitle {
-            color: #888;
-            font-size: 12px;
-        }
-
-        .light-theme .header-subtitle {
-            color: #666;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .btn {
-            background-color: #404040;
-            color: #fff;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            transition: all 0.3s ease;
-        }
-
-        .btn:hover {
-            background-color: #4a4a4a;
-        }
-
-        .light-theme .btn {
-            background-color: #e0e0e0;
-            color: #333;
-        }
-
-        .light-theme .btn:hover {
-            background-color: #d0d0d0;
-        }
-
-        .btn-primary {
-            background-color: #0066cc;
-            color: #fff;
-        }
-
-        .btn-primary:hover {
-            background-color: #0052a3;
-        }
-
-        .theme-toggle {
-            background-color: #ffd700;
-            color: #1a1a1a;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .theme-toggle:hover {
-            background-color: #ffed4a;
-        }
-
-        .file-input-container {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            padding: 30px;
+            text-align: center;
             position: relative;
             overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            position: relative;
+            z-index: 1;
+        }
+
+        .controls {
+            padding: 30px;
+            background: rgba(51, 65, 85, 0.5);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .import-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
             display: inline-block;
         }
 
         .file-input {
             position: absolute;
-            left: -9999px;
             opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
         }
 
         .file-input-label {
-            background-color: #0066cc;
-            color: #fff;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 12px;
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
             transition: all 0.3s ease;
+            font-weight: 600;
+            border: 2px solid transparent;
         }
 
         .file-input-label:hover {
-            background-color: #0052a3;
+            background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
         }
 
-        .search-container {
+        .search-box {
             position: relative;
-            display: flex;
-            align-items: center;
         }
 
         .search-input {
-            background-color: #404040;
-            border: 1px solid #555;
-            color: #fff;
-            padding: 6px 30px 6px 10px;
-            border-radius: 4px;
-            width: 200px;
-            font-size: 12px;
+            width: 100%;
+            padding: 15px 50px 15px 20px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            color: #e2e8f0;
+            font-size: 16px;
             transition: all 0.3s ease;
         }
 
-        .search-input::placeholder {
-            color: #888;
-        }
-
-        .light-theme .search-input {
-            background-color: #f0f0f0;
-            border: 1px solid #ccc;
-            color: #333;
-        }
-
-        .light-theme .search-input::placeholder {
-            color: #666;
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .search-icon {
             position: absolute;
-            right: 8px;
-            color: #888;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
         }
 
-        .main-content {
-            padding: 0;
-            height: calc(100vh - 60px);
-            overflow: auto;
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            min-width: 150px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
         }
 
         .table-container {
-            background-color: #1a1a1a;
-            border: 1px solid #404040;
-            border-radius: 6px;
-            margin: 20px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .light-theme .table-container {
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
+            overflow-x: auto;
+            max-height: 70vh;
+            border-radius: 0 0 20px 20px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            background-color: transparent;
+            background: rgba(15, 23, 42, 0.8);
         }
 
         th {
-            background-color: #2d2d2d;
-            color: #ccc;
-            font-weight: 500;
-            padding: 12px 10px;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: #f1f5f9;
+            padding: 20px 15px;
             text-align: left;
-            border-bottom: 1px solid #404040;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid rgba(148, 163, 184, 0.2);
             position: sticky;
             top: 0;
             z-index: 10;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .light-theme th {
-            background-color: #f5f5f5;
-            color: #666;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        th:hover {
-            background-color: #353535;
-        }
-
-        .light-theme th:hover {
-            background-color: #e8e8e8;
-        }
-
-        .sortable {
-            position: relative;
-        }
-
-        .sortable:after {
-            content: '⇅';
-            position: absolute;
-            right: 5px;
-            opacity: 0.5;
-            font-size: 10px;
-        }
-
-        .sort-asc:after {
-            content: '↑';
-            opacity: 1;
-        }
-
-        .sort-desc:after {
-            content: '↓';
-            opacity: 1;
         }
 
         td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #2d2d2d;
-            vertical-align: middle;
-            transition: all 0.3s ease;
-        }
-
-        .light-theme td {
-            border-bottom: 1px solid #f0f0f0;
+            padding: 15px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            vertical-align: top;
         }
 
         tr:hover {
-            background-color: #252525;
+            background: rgba(51, 65, 85, 0.3);
+            transform: scale(1.001);
+            transition: all 0.2s ease;
         }
 
-        .light-theme tr:hover {
-            background-color: #f8f8f8;
+        .secret-cell {
+            max-width: 300px;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            background: rgba(220, 38, 127, 0.1);
+            padding: 8px;
+            border-radius: 6px;
+            border-left: 3px solid #dc2626;
         }
 
-        .checkbox {
-            width: 16px;
-            height: 16px;
-            accent-color: #0066cc;
+        .url-cell {
+            max-width: 250px;
+            word-break: break-all;
         }
 
-        .repo-name {
-            color: #4a9eff;
+        .url-link {
+            color: #3b82f6;
             text-decoration: none;
-            font-weight: 500;
+            transition: color 0.3s ease;
         }
 
-        .repo-name:hover {
+        .url-link:hover {
+            color: #60a5fa;
             text-decoration: underline;
         }
 
-        .author-name {
-            font-weight: 500;
-            color: #fff;
-        }
-
-        .light-theme .author-name {
-            color: #333;
-        }
-
-        .commit-hash {
-            color: #4a9eff;
-            text-decoration: none;
-            font-family: monospace;
-        }
-
-        .commit-hash:hover {
-            text-decoration: underline;
-        }
-
-        .filename {
-            color: #4a9eff;
-            text-decoration: none;
-            font-family: monospace;
-            font-size: 12px;
-        }
-
-        .filename:hover {
-            text-decoration: underline;
-        }
-
-        .verification-status {
+        .detector-badge {
+            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+            color: white;
             padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 500;
-            text-transform: uppercase;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
             display: inline-block;
-            min-width: 60px;
-            text-align: center;
         }
 
-        .verified {
-            background-color: #51cf66;
-            color: #ffffff;
-        }
-
-        .not-verified {
-            background-color: #ff6b6b;
-            color: #ffffff;
-        }
-
-        .filter-input {
-            background-color: #2d2d2d;
-            border: 1px solid #404040;
-            color: #fff;
+        .verified-badge {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
             padding: 4px 8px;
-            border-radius: 3px;
-            font-size: 11px;
-            width: 100%;
-            transition: all 0.3s ease;
-            margin-top: 4px;
-        }
-
-        .filter-input::placeholder {
-            color: #666;
-        }
-
-        .light-theme .filter-input {
-            background-color: #f8f8f8;
-            border: 1px solid #d0d0d0;
-            color: #333;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
         }
 
         .empty-state {
             text-align: center;
-            padding: 40px;
-            color: #888;
+            padding: 60px 20px;
+            color: #64748b;
         }
 
-        .light-theme .empty-state {
-            color: #666;
-        }
-
-        .empty-state h3 {
-            margin-bottom: 10px;
-            font-size: 18px;
-        }
-
-        .empty-state p {
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
             margin-bottom: 20px;
+            opacity: 0.5;
         }
 
-        .stats-container {
-            display: flex;
-            gap: 20px;
-            margin-left: 10px;
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
         }
 
-        .stat-item {
-            font-size: 11px;
-            color: #888;
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(59, 130, 246, 0.3);
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
         }
 
-        .stat-value {
-            font-weight: 600;
-            color: #fff;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
-        .light-theme .stat-value {
-            color: #333;
+        .error {
+            background: rgba(220, 38, 127, 0.1);
+            border: 1px solid rgba(220, 38, 127, 0.3);
+            color: #fca5a5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
         }
 
-        .verified-count {
-            color: #51cf66;
-        }
-
-        .unverified-count {
-            color: #ff6b6b;
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stats {
+                flex-direction: column;
+            }
+            
+            .controls {
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-left">
-            <div class="header-title">
-                📊 Secret Scanner Results
-            </div>
-            <div class="header-subtitle" id="dataInfo">No data loaded. Please import a JSON file.</div>
-            <div class="stats-container" id="statsContainer" style="display: none;">
-                <div class="stat-item">
-                    Verified: <span class="stat-value verified-count" id="verifiedCount">0</span>
-                </div>
-                <div class="stat-item">
-                    Unverified: <span class="stat-value unverified-count" id="unverifiedCount">0</span>
-                </div>
-            </div>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Secrets Analyzer</h1>
+            <p>Analyze and visualize security secrets from your repositories</p>
         </div>
-        <div class="header-right">
-            <div class="file-input-container">
-                <input type="file" id="jsonFileInput" class="file-input" accept=".json" />
-                <label for="jsonFileInput" class="file-input-label">
-                    📁 Import JSON
-                </label>
-            </div>
-            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
-                🌙 Dark Mode
-            </button>
-            <button class="btn" onclick="clearData()">
-                🗑️ Clear Data
-            </button>
-            <button class="btn" onclick="exportData()">
-                📥 Export
-            </button>
-            <div class="search-container">
-                <input type="text" class="search-input" placeholder="Global search..." id="globalSearch">
-                <span class="search-icon">🔍</span>
-            </div>
-        </div>
-    </div>
 
-    <div class="main-content">
-        <div class="table-container">
-            <div id="emptyState" class="empty-state">
-                <h3>No Data Available</h3>
-                <p>Click "Import JSON" to load your TruffleHog scan results</p>
-                <div class="file-input-container">
-                    <input type="file" id="jsonFileInput2" class="file-input" accept=".json" />
-                    <label for="jsonFileInput2" class="file-input-label btn-primary">
-                        📁 Select JSON File
+        <div class="controls">
+            <div class="import-section">
+                <div class="file-input-wrapper">
+                    <input type="file" id="jsonFile" class="file-input" accept=".json" multiple>
+                    <label for="jsonFile" class="file-input-label">
+                        📁 Import JSON Files
                     </label>
                 </div>
+                
+                <div class="search-box">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search secrets, repositories, or commits...">
+                    <div class="search-icon">🔍</div>
+                </div>
             </div>
-            <table id="secretsTable" style="display: none;">
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalSecrets">0</div>
+                    <div class="stat-label">Total Secrets</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="verifiedSecrets">0</div>
+                    <div class="stat-label">Verified</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="uniqueRepos">0</div>
+                    <div class="stat-label">Repositories</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table id="secretsTable">
                 <thead>
                     <tr>
-                        <th width="40">
-                            <input type="checkbox" class="checkbox" id="selectAll">
-                        </th>
-                        <th class="sortable" onclick="sortTable(1)" data-column="repo_name">
-                            Repository
-                            <input type="text" class="filter-input" placeholder="Filter repo..." onclick="event.stopPropagation()" onkeyup="filterTable()">
-                        </th>
-                        <th class="sortable" onclick="sortTable(2)" data-column="author_name">
-                            Author
-                            <input type="text" class="filter-input" placeholder="Filter author..." onclick="event.stopPropagation()" onkeyup="filterTable()">
-                        </th>
-                        <th class="sortable" onclick="sortTable(3)" data-column="commit">
-                            Commit
-                            <input type="text" class="filter-input" placeholder="Filter commit..." onclick="event.stopPropagation()" onkeyup="filterTable()">
-                        </th>
-                        <th class="sortable" onclick="sortTable(4)" data-column="file_name">
-                            Filename
-                            <input type="text" class="filter-input" placeholder="Filter filename..." onclick="event.stopPropagation()" onkeyup="filterTable()">
-                        </th>
-                        <th class="sortable" onclick="sortTable(5)" data-column="verified">
-                            Verified
-                            <input type="text" class="filter-input" placeholder="Filter verified..." onclick="event.stopPropagation()" onkeyup="filterTable()">
-                        </th>
+                        <th>Secret</th>
+                        <th>Detector</th>
+                        <th>Repository</th>
+                        <th>Commit</th>
+                        <th>Verified</th>
+                        <th>File Path</th>
                     </tr>
                 </thead>
-                <tbody id="tableBody">
-                    <!-- Data will be populated by JavaScript -->
+                <tbody id="secretsTableBody">
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10,9 9,9 8,9"/>
+                            </svg>
+                            <h3>No secrets data loaded</h3>
+                            <p>Import a JSON file to start analyzing secrets</p>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -511,270 +388,178 @@
     <script>
         let secretsData = [];
         let filteredData = [];
-        let currentTheme = 'dark';
-        let sortDirection = {};
 
-        // Initialize theme from saved preference
-        function initializeTheme() {
-            const savedTheme = JSON.parse(localStorage.getItem('secretScanner_theme') || '"dark"');
-            currentTheme = savedTheme;
-            if (currentTheme === 'light') {
-                document.body.classList.add('light-theme');
-                document.getElementById('themeToggle').textContent = '☀️ Light Mode';
-            }
-        }
+        // File input handler
+        document.getElementById('jsonFile').addEventListener('change', function(e) {
+            const files = e.target.files;
+            if (files.length === 0) return;
 
-        // Theme toggle functionality
-        function toggleTheme() {
-            const body = document.body;
-            const themeToggle = document.getElementById('themeToggle');
+            showLoading();
             
-            if (currentTheme === 'dark') {
-                body.classList.add('light-theme');
-                themeToggle.textContent = '☀️ Light Mode';
-                currentTheme = 'light';
-            } else {
-                body.classList.remove('light-theme');
-                themeToggle.textContent = '🌙 Dark Mode';
-                currentTheme = 'dark';
-            }
-            
-            // Save theme preference
-            localStorage.setItem('secretScanner_theme', JSON.stringify(currentTheme));
-        }
+            let allSecrets = [];
+            let filesProcessed = 0;
 
-        // File import functionality
-        function setupFileInput() {
-            const fileInput1 = document.getElementById('jsonFileInput');
-            const fileInput2 = document.getElementById('jsonFileInput2');
-            
-            [fileInput1, fileInput2].forEach(input => {
-                input.addEventListener('change', handleFileSelect);
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const jsonData = JSON.parse(e.target.result);
+                        
+                        // Handle both single objects and arrays
+                        if (Array.isArray(jsonData)) {
+                            allSecrets = allSecrets.concat(jsonData);
+                        } else {
+                            allSecrets.push(jsonData);
+                        }
+                        
+                        filesProcessed++;
+                        
+                        // Process data when all files are loaded
+                        if (filesProcessed === files.length) {
+                            secretsData = allSecrets;
+                            filteredData = [...secretsData];
+                            displaySecrets();
+                            updateStats();
+                        }
+                    } catch (error) {
+                        showError('Error parsing JSON file: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
             });
-        }
+        });
 
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const jsonData = JSON.parse(e.target.result);
-                    loadData(jsonData);
-                    // Save data to browser storage
-                    localStorage.setItem('secretScanner_data', JSON.stringify(jsonData));
-                    updateDataInfo(jsonData.length);
-                    showTable();
-                } catch (error) {
-                    alert('Error parsing JSON file: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function loadData(data) {
-            secretsData = data.map(item => ({
-                repo_name: extractRepoName(item.repo_url),
-                author_name: extractAuthorName(item.email),
-                commit: item.commit || '',
-                file_name: extractFileName(item.file_path),
-                verified: item.verified || false,
-                commit_url: item.commit_url || '',
-                repo_url: item.repo_url || '',
-                file_path: item.file_path || ''
-            }));
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
             
-            filteredData = [...secretsData];
-            populateTable();
-            updateStats();
+            filteredData = secretsData.filter(secret => {
+                const raw_secret = (secret.raw_secret || '').toLowerCase();
+                const repo_url = (secret.repo_url || '').toLowerCase();
+                const commit_url = (secret.commit_url || '').toLowerCase();
+                const detector = (secret.detector || '').toLowerCase();
+                const file_path = (secret.file_path || '').toLowerCase();
+                
+                return raw_secret.includes(searchTerm) || 
+                       repo_url.includes(searchTerm) || 
+                       commit_url.includes(searchTerm) || 
+                       detector.includes(searchTerm) || 
+                       file_path.includes(searchTerm);
+            });
+            
+            displaySecrets();
+        });
+
+        function showLoading() {
+            const tbody = document.getElementById('secretsTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading secrets data...</p>
+                    </td>
+                </tr>
+            `;
         }
 
-        function extractRepoName(url) {
-            if (!url) return 'Unknown';
-            return url.split('/').pop() || 'Unknown';
+        function showError(message) {
+            const tbody = document.getElementById('secretsTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6">
+                        <div class="error">
+                            <strong>Error:</strong> ${message}
+                        </div>
+                    </td>
+                </tr>
+            `;
         }
 
-        function extractAuthorName(email) {
-            if (!email) return 'Unknown';
-            const match = email.match(/^([^<]+)</);
-            return match ? match[1].trim() : email.split('@')[0];
-        }
+        function displaySecrets() {
+            const tbody = document.getElementById('secretsTableBody');
+            
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            <h3>No secrets found</h3>
+                            <p>Try adjusting your search criteria</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
 
-        function extractFileName(path) {
-            if (!path) return 'Unknown';
-            return path.split('/').pop() || 'Unknown';
-        }
+            tbody.innerHTML = filteredData.map(secret => {
+                const secretDisplay = secret.raw_secret ? 
+                    (secret.raw_secret.length > 50 ? 
+                        secret.raw_secret.substring(0, 50) + '...' : 
+                        secret.raw_secret) : 
+                    'N/A';
 
-        function updateDataInfo(count) {
-            const dataInfo = document.getElementById('dataInfo');
-            dataInfo.textContent = `Loaded ${count} secret detections. Showing ${filteredData.length} results.`;
+                const repoName = secret.repo_url ? 
+                    secret.repo_url.split('/').slice(-2).join('/') : 
+                    'N/A';
+
+                const commitHash = secret.commit_url ? 
+                    secret.commit_url.split('/').pop().substring(0, 8) : 
+                    'N/A';
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="secret-cell" title="${secret.raw_secret || 'N/A'}">
+                                ${secretDisplay}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="detector-badge">
+                                ${secret.detector || 'Unknown'}
+                            </span>
+                        </td>
+                        <td class="url-cell">
+                            ${secret.repo_url ? 
+                                `<a href="${secret.repo_url}" class="url-link" target="_blank" title="${secret.repo_url}">
+                                    ${repoName}
+                                </a>` : 
+                                'N/A'
+                            }
+                        </td>
+                        <td class="url-cell">
+                            ${secret.commit_url ? 
+                                `<a href="${secret.commit_url}" class="url-link" target="_blank" title="${secret.commit_url}">
+                                    ${commitHash}
+                                </a>` : 
+                                'N/A'
+                            }
+                        </td>
+                        <td>
+                            ${secret.verified ? 
+                                '<span class="verified-badge">✓ Verified</span>' : 
+                                '<span style="color: #64748b;">Not Verified</span>'
+                            }
+                        </td>
+                        <td class="url-cell" title="${secret.file_path || 'N/A'}">
+                            ${secret.file_path || 'N/A'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function updateStats() {
-            const verifiedCount = secretsData.filter(item => item.verified).length;
-            const unverifiedCount = secretsData.length - verifiedCount;
-            
-            document.getElementById('verifiedCount').textContent = verifiedCount;
-            document.getElementById('unverifiedCount').textContent = unverifiedCount;
-            document.getElementById('statsContainer').style.display = 'flex';
+            const totalSecrets = secretsData.length;
+            const verifiedSecrets = secretsData.filter(s => s.verified).length;
+            const uniqueRepos = new Set(secretsData.map(s => s.repo_url).filter(url => url)).size;
+
+            document.getElementById('totalSecrets').textContent = totalSecrets;
+            document.getElementById('verifiedSecrets').textContent = verifiedSecrets;
+            document.getElementById('uniqueRepos').textContent = uniqueRepos;
         }
-
-        function showTable() {
-            document.getElementById('emptyState').style.display = 'none';
-            document.getElementById('secretsTable').style.display = 'table';
-        }
-
-        function populateTable() {
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
-
-            filteredData.forEach((item, index) => {
-                const row = document.createElement('tr');
-                
-                // Shorten commit hash for display
-                const shortCommit = item.commit.substring(0, 8);
-                
-                row.innerHTML = `
-                    <td><input type="checkbox" class="checkbox"></td>
-                    <td><a href="${item.repo_url}" class="repo-name" target="_blank">${item.repo_name}</a></td>
-                    <td><span class="author-name">${item.author_name}</span></td>
-                    <td><a href="${item.commit_url}" class="commit-hash" target="_blank">${shortCommit}</a></td>
-                    <td><a href="${item.commit_url}" class="filename" target="_blank">${item.file_name}</a></td>
-                    <td><span class="verification-status ${item.verified ? 'verified' : 'not-verified'}">${item.verified ? 'Yes' : 'No'}</span></td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-        }
-
-        function sortTable(columnIndex) {
-            const columns = ['', 'repo_name', 'author_name', 'commit', 'file_name', 'verified'];
-            const column = columns[columnIndex];
-            
-            // Toggle sort direction
-            if (!sortDirection[column]) {
-                sortDirection[column] = 'asc';
-            } else if (sortDirection[column] === 'asc') {
-                sortDirection[column] = 'desc';
-            } else {
-                sortDirection[column] = 'asc';
-            }
-            
-            // Update visual indicators
-            document.querySelectorAll('.sortable').forEach(th => {
-                th.classList.remove('sort-asc', 'sort-desc');
-            });
-            
-            const currentTh = document.querySelectorAll('.sortable')[columnIndex - 1];
-            currentTh.classList.add(sortDirection[column] === 'asc' ? 'sort-asc' : 'sort-desc');
-            
-            // Sort the data
-            filteredData.sort((a, b) => {
-                let aVal = a[column];
-                let bVal = b[column];
-                
-                if (column === 'verified') {
-                    aVal = aVal ? 1 : 0;
-                    bVal = bVal ? 1 : 0;
-                }
-                
-                if (sortDirection[column] === 'asc') {
-                    return aVal > bVal ? 1 : -1;
-                } else {
-                    return aVal < bVal ? 1 : -1;
-                }
-            });
-            
-            populateTable();
-        }
-
-        function filterTable() {
-            const filters = Array.from(document.querySelectorAll('.filter-input')).map(input => input.value.toLowerCase());
-            const columns = ['repo_name', 'author_name', 'commit', 'file_name', 'verified'];
-            
-            filteredData = secretsData.filter(item => {
-                return filters.every((filter, index) => {
-                    if (!filter) return true;
-                    let value = item[columns[index]];
-                    if (columns[index] === 'verified') {
-                        value = value ? 'yes' : 'no';
-                    }
-                    return String(value).toLowerCase().includes(filter);
-                });
-            });
-            
-            populateTable();
-            updateDataInfo(secretsData.length);
-        }
-
-        function clearData() {
-            if (confirm('Are you sure you want to clear all data?')) {
-                secretsData = [];
-                filteredData = [];
-                localStorage.removeItem('secretScanner_data');
-                document.getElementById('emptyState').style.display = 'block';
-                document.getElementById('secretsTable').style.display = 'none';
-                document.getElementById('statsContainer').style.display = 'none';
-                document.getElementById('dataInfo').textContent = 'No data loaded. Please import a JSON file.';
-            }
-        }
-
-        function exportData() {
-            if (secretsData.length === 0) {
-                alert('No data to export. Please import a JSON file first.');
-                return;
-            }
-            
-            const dataStr = JSON.stringify(secretsData, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'secrets_export.json';
-            link.click();
-            URL.revokeObjectURL(url);
-        }
-
-        // Search functionality
-        document.getElementById('globalSearch').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            
-            if (searchTerm === '') {
-                filteredData = [...secretsData];
-            } else {
-                filteredData = secretsData.filter(item => {
-                    return Object.values(item).some(value => 
-                        String(value).toLowerCase().includes(searchTerm)
-                    );
-                });
-            }
-            
-            populateTable();
-            updateDataInfo(secretsData.length);
-        });
-
-        // Load saved data on page load
-        function loadSavedData() {
-            const savedData = localStorage.getItem('secretScanner_data');
-            if (savedData) {
-                try {
-                    const jsonData = JSON.parse(savedData);
-                    loadData(jsonData);
-                    updateDataInfo(jsonData.length);
-                    showTable();
-                } catch (error) {
-                    console.error('Error loading saved data:', error);
-                }
-            }
-        }
-
-        // Initialize the application
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeTheme();
-            setupFileInput();
-            loadSavedData();
-        });
     </script>
 </body>
 </html>
