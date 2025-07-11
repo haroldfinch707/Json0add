@@ -1,405 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimalist JSON Reporter</title>
-    <style>
-        :root {
-            --bg-color: #0d1117;
-            --card-bg-color: #161b22;
-            --text-color: #c9d1d9;
-            --text-muted-color: #8b949e;
-            --primary-color: #58a6ff;
-            --border-color: #30363d;
-            --hover-bg-color: #21262d;
-            --success-color: #2ea043;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 2rem;
-            box-sizing: border-box;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-        
-        h1 {
-            text-align: center;
-            font-weight: 500;
-            margin-bottom: 2rem;
-        }
-
-        /* --- File Import --- */
-        .file-importer {
-            text-align: center;
-            border: 2px dashed var(--border-color);
-            padding: 2rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            background-color: var(--card-bg-color);
-            cursor: pointer;
-            transition: border-color 0.3s, background-color 0.3s;
-        }
-        .file-importer:hover {
-            border-color: var(--primary-color);
-            background-color: var(--hover-bg-color);
-        }
-        #jsonFileInput { display: none; }
-
-        /* --- Results List --- */
-        .results-container {
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .result-item {
-            background-color: var(--card-bg-color);
-            border-bottom: 1px solid var(--border-color);
-        }
-        .result-item:last-child {
-            border-bottom: none;
-        }
-        .result-header {
-            display: flex;
-            justify-content: space-between;
-            padding: 1rem 1.5rem;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .result-header:hover {
-            background-color: var(--hover-bg-color);
-        }
-        .result-item.active .result-header {
-            background-color: #1f6feb;
-            color: #fff;
-        }
-        .result-header span {
-            flex: 1;
-            padding: 0 10px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .result-header span:first-child { padding-left: 0; }
-        .result-header span:last-child { text-align: right; padding-right: 0; }
-        .result-header .repo { color: var(--text-muted-color); }
-        .result-item.active .result-header .repo { color: #c9d1d9; }
-
-
-        .result-details {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s ease-out, padding 0.4s ease-out;
-            background-color: var(--bg-color);
-            padding: 0 1.5rem;
-        }
-        .result-item.active .result-details {
-            max-height: 500px; /* Large enough for content */
-            padding: 1.5rem;
-            border-top: 1px solid var(--border-color);
-        }
-        .detail-group { margin-bottom: 1rem; }
-        .detail-group label {
-            display: block;
-            font-size: 0.8rem;
-            color: var(--text-muted-color);
-            margin-bottom: 0.25rem;
-        }
-        .detail-group p {
-            margin: 0;
-            padding: 0.75rem;
-            background-color: #010409;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-family: monospace;
-            word-wrap: break-word;
-        }
-        
-        .createReportBtn {
-            width: 100%;
-            padding: 0.8rem;
-            font-size: 1rem;
-            font-weight: 500;
-            color: #fff;
-            background-color: var(--primary-color);
-            border: 1px solid var(--primary-color);
-            border-radius: 6px;
-            cursor: pointer;
-            margin-top: 1rem;
-            transition: background-color 0.3s;
-        }
-        .createReportBtn:hover { 
-            background-color: #409eff;
-        }
-
-        /* --- Modal --- */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.7);
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: var(--card-bg-color);
-            margin: auto;
-            padding: 2rem;
-            border: 1px solid var(--border-color);
-            width: 80%;
-            max-width: 700px;
-            border-radius: 8px;
-            position: relative;
-        }
-        .close-btn {
-            color: #aaa;
-            position: absolute;
-            top: 1rem;
-            right: 1.5rem;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .close-btn:hover, .close-btn:focus { color: var(--text-color); }
-        #reportOutput {
-            background-color: var(--bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 1rem;
-            min-height: 300px;
-            white-space: pre-wrap;
-            font-family: monospace;
-        }
-        #copyReportBtn {
-            padding: 0.7rem 1.2rem;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: #fff;
-            background-color: var(--success-color);
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-top: 1rem;
-            transition: background-color 0.3s;
-        }
-        #copyReportBtn:hover { background-color: #238636; }
-
-    </style>
+  <meta charset="UTF-8">
+  <title>Security Findings Viewer</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --primary: #58a6ff;
+      --success: #3fb950;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 2rem;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+    h1 {
+      text-align: center;
+      color: var(--primary);
+    }
+    .drop-zone {
+      border: 2px dashed var(--primary);
+      padding: 2rem;
+      text-align: center;
+      margin: 1rem auto;
+      max-width: 600px;
+      cursor: pointer;
+      border-radius: 8px;
+      background: var(--card);
+    }
+    .finding {
+      background: var(--card);
+      border: 1px solid var(--border);
+      margin: 1rem auto;
+      max-width: 800px;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .header {
+      padding: 1rem;
+      cursor: pointer;
+      font-weight: bold;
+      border-bottom: 1px solid var(--border);
+    }
+    .details {
+      display: none;
+      padding: 1rem;
+    }
+    .details p {
+      margin: 0.3rem 0;
+    }
+    .active .details {
+      display: block;
+    }
+    .report-btn {
+      background: var(--primary);
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: var(--card);
+      padding: 1.5rem;
+      border-radius: 8px;
+      max-width: 600px;
+      width: 100%;
+      position: relative;
+    }
+    .modal-content textarea {
+      width: 100%;
+      height: 300px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      font-family: monospace;
+      resize: vertical;
+    }
+    .copy-btn {
+      margin-top: 1rem;
+      background: var(--success);
+      border: none;
+      padding: 0.5rem 1rem;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .close {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1.5rem;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Minimalist JSON Reporter</h1>
+<h1>Security Findings Viewer</h1>
+<div class="drop-zone" onclick="document.getElementById('fileInput').click();">
+  Click or Drag to Import JSON File
+</div>
+<input type="file" id="fileInput" style="display:none" accept=".json" />
 
-        <label for="jsonFileInput" class="file-importer">Click to Import JSON File</label>
-        <input type="file" id="jsonFileInput" accept=".json">
-        
-        <div class="results-container" id="resultsContainer">
-            <!-- JS will populate this -->
-        </div>
-    </div>
+<div id="findings"></div>
 
-    <!-- Report Modal -->
-    <div id="reportModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Bug Bounty Report</h2>
-            <pre id="reportOutput"></pre>
-            <button id="copyReportBtn">Copy to Clipboard</button>
-        </div>
-    </div>
+<div class="modal" id="reportModal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <textarea id="markdownOutput" readonly></textarea>
+    <button class="copy-btn" onclick="copyMarkdown()">Copy to Clipboard</button>
+  </div>
+</div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- Element References ---
-            const fileInput = document.getElementById('jsonFileInput');
-            const resultsContainer = document.getElementById('resultsContainer');
-            const modal = document.getElementById('reportModal');
-            const closeModalBtn = document.querySelector('.close-btn');
-            const reportOutput = document.getElementById('reportOutput');
-            const copyReportBtn = document.getElementById('copyReportBtn');
+<script>
+  const findingsContainer = document.getElementById('findings');
+  const modal = document.getElementById('reportModal');
+  const markdownOutput = document.getElementById('markdownOutput');
+  let findingsData = [];
 
-            // --- State ---
-            let allData = [];
-            let selectedItem = null;
+  function renderFindings() {
+    findingsContainer.innerHTML = '';
+    findingsData.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.className = 'finding';
+      if (localStorage.getItem('lastOpen') == index) div.classList.add('active');
 
-            // --- Functions ---
-            const generateReportTemplate = (item) => {
-                if (!item) return "No item selected.";
-                return `
-# Security Vulnerability Report: Hardcoded Secret Detected
-## Summary
-A hardcoded secret was discovered in the codebase, posing a potential security risk. This allows for unauthorized access to sensitive resources.
-## Vulnerability Details
-- **Vulnerability Type:** Hardcoded Secret
-- **Detector:** ${item.detector || 'N/A'}
-## Location of the Finding
-The hardcoded secret was found at the following location:
-- **Repository URL:** \`${item.repo_url || 'N/A'}\`
-- **Commit URL:** \`${item.commit_url || 'N/A'}\`
-- **File Path:** \`${item.file_path || 'N/A'}\`
-## The Secret
-The following secret was identified:
+      const header = document.createElement('div');
+      header.className = 'header';
+      header.textContent = `${item.detector} — ${item.repo_url}`;
+      header.onclick = () => toggle(index);
+
+      const details = document.createElement('div');
+      details.className = 'details';
+      details.innerHTML = `
+        <p><strong>Raw Secret:</strong> ${item.raw_secret}</p>
+        <p><strong>Repo URL:</strong> <a href="${item.repo_url}" target="_blank">${item.repo_url}</a></p>
+        <p><strong>Commit URL:</strong> <a href="${item.commit_url}" target="_blank">${item.commit_url}</a></p>
+        <button class="report-btn" onclick="generateReport(${index})">Create Report</button>
+      `;
+
+      div.appendChild(header);
+      div.appendChild(details);
+      findingsContainer.appendChild(div);
+    });
+  }
+
+  function toggle(index) {
+    document.querySelectorAll('.finding').forEach((el, i) => {
+      if (i === index) {
+        el.classList.toggle('active');
+        localStorage.setItem('lastOpen', el.classList.contains('active') ? index : -1);
+      } else {
+        el.classList.remove('active');
+      }
+    });
+  }
+
+  function generateReport(index) {
+    const item = findingsData[index];
+    const md = `## Security Finding: ${item.detector}
+
+**Raw Secret**  
 \`\`\`
-${item.raw_secret || 'N/A'}
+${item.raw_secret}
 \`\`\`
-## Impact
-Exposure of this secret could lead to unauthorized access to services, data breaches, and potential system compromise.
-## Recommended Remediation
-1.  **Invalidate the Leaked Secret:** Immediately revoke or change the exposed credential.
-2.  **Remove from History:** Purge the secret from the entire Git history to prevent discovery.
-3.  **Use a Secrets Manager:** Store secrets securely using a service like AWS Secrets Manager, HashiCorp Vault, or GitHub Secrets.
-                `.trim();
-            };
-            
-            const renderResults = (data, activeIndex = -1) => {
-                resultsContainer.innerHTML = ''; // Clear previous results
-                data.forEach((item, index) => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'result-item';
-                    itemDiv.dataset.index = index;
-                    
-                    if (index === activeIndex) {
-                        itemDiv.classList.add('active');
-                    }
 
-                    itemDiv.innerHTML = `
-                        <div class="result-header">
-                            <span>${item.detector || 'N/A'}</span>
-                            <span class="repo">${item.repo_url || 'N/A'}</span>
-                            <span>${item.file_path || 'N/A'}</span>
-                        </div>
-                        <div class="result-details">
-                            <div class="detail-group">
-                                <label>Secret (raw_secret)</label>
-                                <p>${item.raw_secret || 'N/A'}</p>
-                            </div>
-                            <div class="detail-group">
-                                <label>Repo URL</label>
-                                <p>${item.repo_url || 'N/A'}</p>
-                            </div>
-                            <div class="detail-group">
-                                <label>Commit URL</label>
-                                <p>${item.commit_url || 'N/A'}</p>
-                            </div>
-                            <button class="createReportBtn">Create Report</button>
-                        </div>
-                    `;
-                    resultsContainer.appendChild(itemDiv);
-                });
-            };
+**Repository URL**  
+${item.repo_url}
 
-            const handleFileSelect = (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
+**Commit URL**  
+${item.commit_url}
 
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const jsonData = JSON.parse(e.target.result);
-                        allData = Array.isArray(jsonData) ? jsonData : [jsonData];
-                        
-                        localStorage.setItem('json_data', JSON.stringify(allData));
-                        localStorage.removeItem('active_index');
+> This finding was discovered during automated secret scanning. Please review and remediate appropriately.
+`;
+    markdownOutput.value = md;
+    modal.style.display = 'flex';
+  }
 
-                        renderResults(allData);
-                        selectedItem = null;
+  function copyMarkdown() {
+    navigator.clipboard.writeText(markdownOutput.value);
+    alert('Copied to clipboard!');
+  }
 
-                    } catch (error) {
-                        alert('Error parsing JSON file. Please check the file format.');
-                        console.error("JSON Parse Error:", error);
-                    }
-                };
-                reader.readAsText(file);
-            };
+  function closeModal() {
+    modal.style.display = 'none';
+  }
 
-            const loadFromStorage = () => {
-                const storedData = localStorage.getItem('json_data');
-                if (storedData) {
-                    allData = JSON.parse(storedData);
-                    const activeIndex = parseInt(localStorage.getItem('active_index'), 10);
-                    
-                    renderResults(allData, activeIndex);
+  document.getElementById('fileInput').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!Array.isArray(data)) throw 'Not an array';
+        findingsData = data;
+        localStorage.setItem('findings', JSON.stringify(data));
+        renderFindings();
+      } catch (err) {
+        alert('Invalid JSON file.');
+      }
+    };
+    reader.readAsText(file);
+  });
 
-                    if (!isNaN(activeIndex) && allData[activeIndex]) {
-                        selectedItem = allData[activeIndex];
-                    }
-                }
-            };
-            
-            // --- Event Listeners ---
-            fileInput.addEventListener('change', handleFileSelect);
-
-            resultsContainer.addEventListener('click', (event) => {
-                const header = event.target.closest('.result-header');
-                const reportButton = event.target.closest('.createReportBtn');
-
-                if (header) {
-                    const itemDiv = header.closest('.result-item');
-                    const index = parseInt(itemDiv.dataset.index, 10);
-                    
-                    // Toggle active state
-                    if (itemDiv.classList.contains('active')) {
-                        itemDiv.classList.remove('active');
-                        selectedItem = null;
-                        localStorage.removeItem('active_index');
-                    } else {
-                        // Deactivate any other active items
-                        resultsContainer.querySelectorAll('.result-item.active').forEach(el => el.classList.remove('active'));
-                        
-                        itemDiv.classList.add('active');
-                        selectedItem = allData[index];
-                        localStorage.setItem('active_index', index);
-                    }
-                }
-
-                if (reportButton) {
-                    // Ensure the correct item is selected before creating a report
-                    const itemDiv = reportButton.closest('.result-item');
-                    const index = parseInt(itemDiv.dataset.index, 10);
-                    selectedItem = allData[index];
-                    
-                    if (selectedItem) {
-                        reportOutput.textContent = generateReportTemplate(selectedItem);
-                        modal.style.display = 'flex';
-                    }
-                }
-            });
-
-            closeModalBtn.addEventListener('click', () => { modal.style.display = 'none'; });
-            window.addEventListener('click', (event) => { if (event.target == modal) modal.style.display = 'none'; });
-
-            copyReportBtn.addEventListener('click', () => {
-                navigator.clipboard.writeText(reportOutput.textContent).then(() => {
-                    copyReportBtn.textContent = 'Copied!';
-                    copyReportBtn.style.backgroundColor = '#238636';
-                    setTimeout(() => {
-                        copyReportBtn.textContent = 'Copy to Clipboard';
-                        copyReportBtn.style.backgroundColor = '#2ea043'; 
-                    }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy text: ', err);
-                    alert('Failed to copy report.');
-                });
-            });
-            
-            // --- Initial Load ---
-            loadFromStorage();
-        });
-    </script>
+  // On load
+  window.addEventListener('load', () => {
+    const saved = localStorage.getItem('findings');
+    if (saved) {
+      findingsData = JSON.parse(saved);
+      renderFindings();
+    }
+  });
+</script>
 
 </body>
 </html>
