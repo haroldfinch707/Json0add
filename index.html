@@ -427,7 +427,8 @@ Exposure of this secret could lead to unauthorized access to services, data brea
                     copyReportBtn.style.backgroundColor = '#218838'; // Darker green
                     setTimeout(() => {
                         copyReportBtn.textContent = 'Copy to Clipboard';
-                        copyReportBtn.style.backgroundColor = var(--success-color);
+                        // FIX: Use the actual color value, not the CSS var() function syntax
+                        copyReportBtn.style.backgroundColor = '#28a745'; 
                     }, 2000);
                 }).catch(err => {
                     console.error('Failed to copy text: ', err);
