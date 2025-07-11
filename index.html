@@ -282,10 +282,10 @@
 # Security Vulnerability Report: Hardcoded Secret Detected
 
 ## Summary
-A hardcoded secret was discovered in the codebase, posing a potential security risk. This allows for unauthorized access to sensitive resources.
+A hardcoded secret was discovered in the Github commit, posing a potential security risk. This allows for unauthorized access to sensitive resources.
 
 ## Vulnerability Details
-- **Vulnerability Type:** Hardcoded Secret
+- **Vulnerability Type:** Sensitive secret
 - **Detector:** ${item.detector || 'N/A'}
 
 ## Location of the Finding
@@ -306,9 +306,8 @@ ${item.raw_secret || 'N/A'}
 Exposure of this secret could lead to unauthorized access to services, data breaches, and potential system compromise.
 
 ## Recommended Remediation
-1.  **Invalidate the Leaked Secret:** Immediately revoke or change the exposed credential.
-2.  **Remove from History:** Purge the secret from the entire Git history to prevent discovery.
-3.  **Use a Secrets Manager:** Store secrets securely using a service like AWS Secrets Manager, HashiCorp Vault, or GitHub Secrets.
+**Invalidate the Leaked Secret:** Immediately revoke or change the exposed credential.
+
                 `.trim();
             };
 
