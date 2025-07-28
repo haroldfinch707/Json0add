@@ -103,13 +103,33 @@ class JSONViewer {
         reader.onload = (e) => {
             try {
                 const jsonData = JSON.parse(e.target.result);
-                const dataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
+                const newDataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
                 
-                console.log('📁 Processing file with', dataArray.length, 'items');
+                console.log('📁 Processing new file with', newDataArray.length, 'items');
                 
-                // Load and save data
-                this.loadDataIntoApp(dataArray);
-                this.saveToLocalStorage(dataArray);
+                // Check if we have existing data
+                if (this.data.length > 0) {
+                    // Ask user if they want to append or replace
+                    const appendChoice = confirm(
+                        `You already have ${this.data.length} items loaded.\n\n` +
+                        `• Click "OK" to ADD the new ${newDataArray.length} items to the top\n` +
+                        `• Click "Cancel" to REPLACE all existing data\n\n` +
+                        `Choose your action:`
+                    );
+                    
+                    if (appendChoice) {
+                        // Append new data to the top
+                        this.appendDataToTop(newDataArray);
+                    } else {
+                        // Replace existing data
+                        this.loadDataIntoApp(newDataArray);
+                        this.saveToLocalStorage(newDataArray);
+                    }
+                } else {
+                    // No existing data, just load normally
+                    this.loadDataIntoApp(newDataArray);
+                    this.saveToLocalStorage(newDataArray);
+                }
                 
             } catch (error) {
                 console.error('❌ JSON parsing error:', error);
@@ -117,6 +137,33 @@ class JSONViewer {
             }
         };
         reader.readAsText(file);
+    }
+
+    // New method to append data to the top
+    appendDataToTop(newDataArray) {
+        console.log('📎 Appending', newDataArray.length, 'new items to the top');
+        
+        // Get current raw data without the processed fields
+        const existingRawData = this.getRawDataArray();
+        
+        // Combine new data at the top with existing data
+        const combinedRawData = [...newDataArray, ...existingRawData];
+        
+        // Reload with combined data
+        this.loadDataIntoApp(combinedRawData);
+        this.saveToLocalStorage(combinedRawData);
+        
+        console.log('✅ Data appended successfully. Total items:', this.data.length);
+        alert(`✅ Added ${newDataArray.length} new items to the top!\nTotal items: ${this.data.length}`);
+    }
+
+    // New helper method to get raw data array (without processed fields)
+    getRawDataArray() {
+        return this.data.map(item => {
+            // Remove processed fields and return original data
+            const { id, reviewed, ...rawItem } = item;
+            return rawItem;
+        });
     }
 
     loadDataIntoApp(rawData) {
@@ -138,10 +185,10 @@ class JSONViewer {
         console.log('✅ Data loaded successfully');
     }
 
-    saveToLocalStorage(data) {
+    saveToLocalStorage(rawDataArray) {
         try {
             const storageData = {
-                data: data,
+                data: rawDataArray,
                 timestamp: new Date().toISOString(),
                 version: '1.0'
             };
@@ -220,18 +267,22 @@ class JSONViewer {
     showDataUI() {
         const summarySection = document.getElementById('summarySection');
         const noData = document.getElementById('noData');
+        const uploadHint = document.getElementById('uploadHint');
         
         if (summarySection) summarySection.style.display = 'block';
         if (noData) noData.style.display = 'none';
+        if (uploadHint) uploadHint.style.display = 'block';
     }
 
     hideDataUI() {
         const summarySection = document.getElementById('summarySection');
         const noData = document.getElementById('noData');
         const tableContainer = document.getElementById('tableContainer');
+        const uploadHint = document.getElementById('uploadHint');
         
         if (summarySection) summarySection.style.display = 'none';
         if (noData) noData.style.display = 'block';
+        if (uploadHint) uploadHint.style.display = 'none';
         
         if (tableContainer) {
             tableContainer.innerHTML = `
@@ -247,7 +298,7 @@ class JSONViewer {
         const confirmMessage = `🗑️ CLEAR ALL DATA
         
 This will permanently remove:
-• Your uploaded JSON file
+• Your uploaded JSON file(s)
 • All review marks  
 • All stored data
 
