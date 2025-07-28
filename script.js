@@ -5,7 +5,8 @@ class JSONViewer {
         this.reviewedItems = this.loadReviewedItems();
         this.currentReport = null;
         this.initEventListeners();
-        this.loadStoredData(); // Load data on startup
+        // Load data AFTER initializing event listeners
+        setTimeout(() => this.loadStoredData(), 100);
     }
 
     initEventListeners() {
@@ -40,7 +41,7 @@ class JSONViewer {
 
         // Search and controls
         globalSearch.addEventListener('input', (e) => this.handleGlobalSearch(e.target.value));
-        clearReviewed.addEventListener('click', () => this.clearAllReviews());
+        clearReviewed.addEventListener('click', () => this.clearAllData());
         exportData.addEventListener('click', () => this.exportData());
 
         // Modal event listeners
@@ -97,9 +98,11 @@ class JSONViewer {
         reader.onload = (e) => {
             try {
                 const jsonData = JSON.parse(e.target.result);
-                this.loadData(Array.isArray(jsonData) ? jsonData : [jsonData]);
-                // Save the uploaded data to localStorage
-                this.saveDataToStorage(Array.isArray(jsonData) ? jsonData : [jsonData]);
+                const dataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
+                this.loadData(dataArray);
+                // Save immediately after loading
+                this.saveDataToStorage(dataArray);
+                console.log('New JSON file loaded and saved to localStorage');
             } catch (error) {
                 alert('Invalid JSON file: ' + error.message);
             }
@@ -116,11 +119,26 @@ class JSONViewer {
         this.filteredData = [...this.data];
         this.updateSummary();
         this.renderTable();
+        this.showDataSections();
+    }
+
+    showDataSections() {
         document.getElementById('summarySection').style.display = 'block';
         document.getElementById('noData').style.display = 'none';
     }
 
-    // Save JSON data to localStorage
+    hideDataSections() {
+        document.getElementById('summarySection').style.display = 'none';
+        document.getElementById('noData').style.display = 'block';
+        document.getElementById('tableContainer').innerHTML = `
+            <div class="no-data" id="noData">
+                <h3>No data loaded</h3>
+                <p>Please upload a JSON file to view the results</p>
+            </div>
+        `;
+    }
+
+    // Save JSON data to localStorage with better error handling
     saveDataToStorage(data) {
         try {
             const dataToStore = {
@@ -129,11 +147,19 @@ class JSONViewer {
                 version: '1.0'
             };
             localStorage.setItem('jsonViewerData', JSON.stringify(dataToStore));
-            console.log('Data saved to localStorage');
+            console.log('✅ Data successfully saved to localStorage');
         } catch (error) {
-            console.error('Error saving data to localStorage:', error);
+            console.error('❌ Error saving data to localStorage:', error);
             if (error.name === 'QuotaExceededError') {
                 alert('Storage quota exceeded. Please clear old data or use a smaller file.');
+                // Try to clear old data and retry
+                this.clearAllData();
+                try {
+                    localStorage.setItem('jsonViewerData', JSON.stringify(dataToStore));
+                    console.log('✅ Data saved after clearing old data');
+                } catch (retryError) {
+                    alert('Unable to save data due to storage limitations.');
+                }
             }
         }
     }
@@ -143,15 +169,25 @@ class JSONViewer {
         try {
             const storedData = localStorage.getItem('jsonViewerData');
             if (storedData) {
+                console.log('📁 Found stored data, attempting to load...');
                 const parsedData = JSON.parse(storedData);
-                if (parsedData && parsedData.data && Array.isArray(parsedData.data)) {
-                    console.log('Loading stored data from:', parsedData.timestamp);
+                if (parsedData && parsedData.data && Array.isArray(parsedData.data) && parsedData.data.length > 0) {
+                    console.log('✅ Loading stored data from:', parsedData.timestamp);
+                    console.log('📊 Data contains:', parsedData.data.length, 'items');
                     this.loadData(parsedData.data);
+                } else {
+                    console.log('⚠️ Stored data is empty or invalid');
+                    this.hideDataSections();
                 }
+            } else {
+                console.log('📭 No stored data found');
+                this.hideDataSections();
             }
         } catch (error) {
-            console.error('Error loading stored data:', error);
+            console.error('❌ Error loading stored data:', error);
+            // Clear corrupted data
             localStorage.removeItem('jsonViewerData');
+            this.hideDataSections();
         }
     }
 
@@ -192,7 +228,11 @@ class JSONViewer {
         const container = document.getElementById('tableContainer');
         
         if (this.filteredData.length === 0) {
-            container.innerHTML = '<div class="no-data"><h3>No matching results</h3></div>';
+            if (this.data.length === 0) {
+                this.hideDataSections();
+            } else {
+                container.innerHTML = '<div class="no-data"><h3>No matching results</h3><p>Try adjusting your search filters</p></div>';
+            }
             return;
         }
 
@@ -367,37 +407,44 @@ class JSONViewer {
         }
     }
 
-    // Clear ALL data and reviews - make page blank
-    clearAllReviews() {
-        if (confirm('Are you sure you want to clear all data? This will remove the uploaded JSON file and all reviews.')) {
-            // Clear all stored data
+    // Clear ALL data - both JSON data AND reviews, reset everything
+    clearAllData() {
+        if (confirm('🗑️ Are you sure you want to clear ALL data?\n\nThis will remove:\n• The uploaded JSON file\n• All review marks\n• All stored data\n\nThis action cannot be undone.')) {
+            
+            console.log('🧹 Clearing all data...');
+            
+            // Clear localStorage
             localStorage.removeItem('jsonViewerData');
             localStorage.removeItem('reviewedItems');
             
-            // Reset application state
+            // Reset all application state
             this.data = [];
             this.filteredData = [];
             this.reviewedItems.clear();
             this.currentReport = null;
             
-            // Hide summary and show no data message
-            document.getElementById('summarySection').style.display = 'none';
-            document.getElementById('noData').style.display = 'block';
-            document.getElementById('tableContainer').innerHTML = `
-                <div class="no-data" id="noData">
-                    <h3>No data loaded</h3>
-                    <p>Please upload a JSON file to view the results</p>
-                </div>
-            `;
-            
             // Clear search input
-            document.getElementById('globalSearch').value = '';
+            const searchInput = document.getElementById('globalSearch');
+            if (searchInput) searchInput.value = '';
             
-            console.log('All data cleared - page reset to blank state');
+            // Clear all filter inputs
+            document.querySelectorAll('[data-filter]').forEach(input => {
+                input.value = '';
+            });
+            
+            // Hide summary and show no data message
+            this.hideDataSections();
+            
+            console.log('✅ All data cleared successfully');
         }
     }
 
     exportData() {
+        if (this.data.length === 0) {
+            alert('No data to export. Please upload a JSON file first.');
+            return;
+        }
+
         const exportData = {
             summary: {
                 totalSecrets: this.data.length,
@@ -405,7 +452,8 @@ class JSONViewer {
                 exportDate: new Date().toISOString()
             },
             reviewed: this.data.filter(item => item.reviewed),
-            unreviewed: this.data.filter(item => !item.reviewed)
+            unreviewed: this.data.filter(item => !item.reviewed),
+            all: this.data
         };
 
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -558,6 +606,7 @@ function generateReport(id) {
 
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Initializing JSONViewer...');
     window.jsonViewer = new JSONViewer();
 });
 
@@ -565,9 +614,11 @@ document.addEventListener('DOMContentLoaded', function() {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
         if (!window.jsonViewer) {
+            console.log('🚀 Fallback initialization...');
             window.jsonViewer = new JSONViewer();
         }
     });
 } else {
+    console.log('🚀 Direct initialization...');
     window.jsonViewer = new JSONViewer();
 }
