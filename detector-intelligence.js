@@ -284,18 +284,29 @@ function generateBugBountyReport(secretData) {
   const repoName = extractRepoName(secretData.repo_url);
   const fileName = extractFileName(secretData.file_path);
   
+  // Generate complete commit URL
+  let commitUrl = '';
+  if (secretData.commit_url) {
+    commitUrl = secretData.commit_url;
+  } else if (secretData.repo_url && secretData.commit) {
+    commitUrl = `${secretData.repo_url}/commit/${secretData.commit}`;
+  } else {
+    commitUrl = 'N/A';
+  }
+  
   return {
-    title: `Exposed ${intelligence.service} Credentials in ${repoName}`,
+    title: `Exposed ${intelligence.service} Credentials in ${repoName} - GitHub Commit`,
     
     summary: `A ${intelligence.category.toLowerCase()} credential for ${intelligence.service} was found exposed in the public repository "${repoName}". The secret was detected in the file "${fileName}" and ${secretData.verified ? 'has been verified as active' : 'appears to be potentially active'}. This exposure poses a ${intelligence.severity.toLowerCase()} security risk to the organization.`,
     
-    poc: `**Proof of Concept:**\n\n${intelligence.poc_template}\n\n**Location Details:**\n- Repository: ${secretData.repo_url}\n- File: ${secretData.file_path}\n- Commit: ${secretData.commit}\n- Detection Method: ${detector}\n- Verification Status: ${secretData.verified ? 'Verified Active' : 'Unverified'}`,
+    poc: `**Proof of Concept:**\n\n${intelligence.poc_template}\n\n**Location Details:**\n- Repository: ${secretData.repo_url}\n- File: ${secretData.file_path}\n- Commit URL: ${commitUrl}`,
     
     impact: `**Business Impact:**\n\n${intelligence.impact}\n\n**Severity:** ${intelligence.severity}\n\n**Potential Consequences:**\n- Unauthorized access to ${intelligence.service}\n- Data breach and privacy violations\n- Financial loss through resource abuse\n- Reputation damage and customer trust loss\n- Compliance violations (GDPR, PCI-DSS, etc.)\n\n**Recommended Actions:**\n${intelligence.remediation}`,
     
     severity: intelligence.severity
   };
 }
+
 
 // Helper functions
 function extractRepoName(url) {
