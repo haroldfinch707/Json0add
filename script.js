@@ -120,7 +120,7 @@ class JSONViewer {
         document.getElementById('noData').style.display = 'none';
     }
 
-    // New method to save data to localStorage
+    // Save JSON data to localStorage
     saveDataToStorage(data) {
         try {
             const dataToStore = {
@@ -132,14 +132,13 @@ class JSONViewer {
             console.log('Data saved to localStorage');
         } catch (error) {
             console.error('Error saving data to localStorage:', error);
-            // Handle quota exceeded error
             if (error.name === 'QuotaExceededError') {
                 alert('Storage quota exceeded. Please clear old data or use a smaller file.');
             }
         }
     }
 
-    // New method to load data from localStorage
+    // Load JSON data from localStorage on page load
     loadStoredData() {
         try {
             const storedData = localStorage.getItem('jsonViewerData');
@@ -152,18 +151,7 @@ class JSONViewer {
             }
         } catch (error) {
             console.error('Error loading stored data:', error);
-            // Clear corrupted data
             localStorage.removeItem('jsonViewerData');
-        }
-    }
-
-    // New method to clear stored data
-    clearStoredData() {
-        try {
-            localStorage.removeItem('jsonViewerData');
-            console.log('Stored data cleared');
-        } catch (error) {
-            console.error('Error clearing stored data:', error);
         }
     }
 
@@ -379,14 +367,33 @@ class JSONViewer {
         }
     }
 
-    // Modified to only clear reviews, not the data
+    // Clear ALL data and reviews - make page blank
     clearAllReviews() {
-        if (confirm('Are you sure you want to clear all review marks? (This will not delete your uploaded data)')) {
+        if (confirm('Are you sure you want to clear all data? This will remove the uploaded JSON file and all reviews.')) {
+            // Clear all stored data
+            localStorage.removeItem('jsonViewerData');
+            localStorage.removeItem('reviewedItems');
+            
+            // Reset application state
+            this.data = [];
+            this.filteredData = [];
             this.reviewedItems.clear();
-            this.data.forEach(item => item.reviewed = false);
-            this.saveReviewedItems();
-            this.updateSummary();
-            this.renderTable();
+            this.currentReport = null;
+            
+            // Hide summary and show no data message
+            document.getElementById('summarySection').style.display = 'none';
+            document.getElementById('noData').style.display = 'block';
+            document.getElementById('tableContainer').innerHTML = `
+                <div class="no-data" id="noData">
+                    <h3>No data loaded</h3>
+                    <p>Please upload a JSON file to view the results</p>
+                </div>
+            `;
+            
+            // Clear search input
+            document.getElementById('globalSearch').value = '';
+            
+            console.log('All data cleared - page reset to blank state');
         }
     }
 
@@ -438,7 +445,6 @@ class JSONViewer {
         const element = document.getElementById(elementId);
         if (!element) return;
         
-        // Create a temporary textarea to handle the copy operation
         const tempTextarea = document.createElement('textarea');
         tempTextarea.value = element.value;
         document.body.appendChild(tempTextarea);
@@ -447,7 +453,6 @@ class JSONViewer {
         try {
             document.execCommand('copy');
             
-            // Visual feedback
             const originalText = button.textContent;
             button.textContent = 'Copied!';
             button.classList.add('copy-success');
@@ -468,7 +473,6 @@ class JSONViewer {
         
         const fullReport = `${this.currentReport.title}\n\n## Summary\n${this.currentReport.summary}\n\n## Proof of Concept\n${this.currentReport.poc}\n\n## Impact\n${this.currentReport.impact}`;
         
-        // Use modern clipboard API if available, fallback to older method
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(fullReport).then(() => {
                 this.showCopyFeedback('copyAllReport');
