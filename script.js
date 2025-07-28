@@ -2,14 +2,24 @@ class JSONViewer {
     constructor() {
         this.data = [];
         this.filteredData = [];
-        this.reviewedItems = this.loadReviewedItems();
+        this.reviewedItems = new Set();
         this.currentReport = null;
+        
+        console.log('🚀 JSONViewer constructor called');
+        
+        // Initialize everything in the correct order
         this.initEventListeners();
-        // Load data AFTER initializing event listeners
-        setTimeout(() => this.loadStoredData(), 100);
+        
+        // Load data after a short delay to ensure DOM is ready
+        setTimeout(() => {
+            this.loadReviewedItems();
+            this.loadStoredData();
+        }, 200);
     }
 
     initEventListeners() {
+        console.log('🎯 Initializing event listeners');
+        
         const fileInput = document.getElementById('fileInput');
         const uploadArea = document.getElementById('uploadArea');
         const globalSearch = document.getElementById('globalSearch');
@@ -17,20 +27,20 @@ class JSONViewer {
         const exportData = document.getElementById('exportData');
 
         // File upload handlers
-        uploadArea.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+        uploadArea?.addEventListener('click', () => fileInput.click());
+        fileInput?.addEventListener('change', (e) => this.handleFileUpload(e));
 
         // Drag and drop
-        uploadArea.addEventListener('dragover', (e) => {
+        uploadArea?.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
         });
 
-        uploadArea.addEventListener('dragleave', () => {
+        uploadArea?.addEventListener('dragleave', () => {
             uploadArea.classList.remove('dragover');
         });
 
-        uploadArea.addEventListener('drop', (e) => {
+        uploadArea?.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
             const files = e.dataTransfer.files;
@@ -40,9 +50,9 @@ class JSONViewer {
         });
 
         // Search and controls
-        globalSearch.addEventListener('input', (e) => this.handleGlobalSearch(e.target.value));
-        clearReviewed.addEventListener('click', () => this.clearAllData());
-        exportData.addEventListener('click', () => this.exportData());
+        globalSearch?.addEventListener('input', (e) => this.handleGlobalSearch(e.target.value));
+        clearReviewed?.addEventListener('click', () => this.clearAllData());
+        exportData?.addEventListener('click', () => this.exportData());
 
         // Modal event listeners
         this.initModalEventListeners();
@@ -54,25 +64,20 @@ class JSONViewer {
         const copyAllReport = document.getElementById('copyAllReport');
         const downloadReport = document.getElementById('downloadReport');
 
-        // Close modal
-        closeModal.addEventListener('click', () => {
-            modal.style.display = 'none';
+        closeModal?.addEventListener('click', () => {
+            if (modal) modal.style.display = 'none';
         });
 
-        // Close modal when clicking outside
         window.addEventListener('click', (e) => {
             if (e.target === modal) {
                 modal.style.display = 'none';
             }
         });
 
-        // Copy all report
-        copyAllReport.addEventListener('click', () => this.copyAllReport());
+        copyAllReport?.addEventListener('click', () => this.copyAllReport());
+        downloadReport?.addEventListener('click', () => this.downloadReport());
 
-        // Download report
-        downloadReport.addEventListener('click', () => this.downloadReport());
-
-        // Individual copy buttons - using event delegation since buttons are added dynamically
+        // Individual copy buttons
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('copy-btn')) {
                 const targetId = e.target.dataset.target;
@@ -99,64 +104,61 @@ class JSONViewer {
             try {
                 const jsonData = JSON.parse(e.target.result);
                 const dataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
-                this.loadData(dataArray);
-                // Save immediately after loading
-                this.saveDataToStorage(dataArray);
-                console.log('New JSON file loaded and saved to localStorage');
+                
+                console.log('📁 Processing file with', dataArray.length, 'items');
+                
+                // Load and save data
+                this.loadDataIntoApp(dataArray);
+                this.saveToLocalStorage(dataArray);
+                
             } catch (error) {
+                console.error('❌ JSON parsing error:', error);
                 alert('Invalid JSON file: ' + error.message);
             }
         };
         reader.readAsText(file);
     }
 
-    loadData(data) {
-        this.data = data.map((item, index) => ({
+    loadDataIntoApp(rawData) {
+        console.log('📊 Loading data into app:', rawData.length, 'items');
+        
+        this.data = rawData.map((item, index) => ({
             ...item,
             id: index,
             reviewed: this.reviewedItems.has(this.generateItemId(item))
         }));
+        
         this.filteredData = [...this.data];
+        
+        // Update UI
         this.updateSummary();
         this.renderTable();
-        this.showDataSections();
+        this.showDataUI();
+        
+        console.log('✅ Data loaded successfully');
     }
 
-    showDataSections() {
-        document.getElementById('summarySection').style.display = 'block';
-        document.getElementById('noData').style.display = 'none';
-    }
-
-    hideDataSections() {
-        document.getElementById('summarySection').style.display = 'none';
-        document.getElementById('noData').style.display = 'block';
-        document.getElementById('tableContainer').innerHTML = `
-            <div class="no-data" id="noData">
-                <h3>No data loaded</h3>
-                <p>Please upload a JSON file to view the results</p>
-            </div>
-        `;
-    }
-
-    // Save JSON data to localStorage with better error handling
-    saveDataToStorage(data) {
+    saveToLocalStorage(data) {
         try {
-            const dataToStore = {
+            const storageData = {
                 data: data,
                 timestamp: new Date().toISOString(),
                 version: '1.0'
             };
-            localStorage.setItem('jsonViewerData', JSON.stringify(dataToStore));
-            console.log('✅ Data successfully saved to localStorage');
+            
+            localStorage.setItem('jsonViewerData', JSON.stringify(storageData));
+            console.log('💾 Data saved to localStorage');
+            
         } catch (error) {
-            console.error('❌ Error saving data to localStorage:', error);
+            console.error('❌ Failed to save to localStorage:', error);
+            
             if (error.name === 'QuotaExceededError') {
-                alert('Storage quota exceeded. Please clear old data or use a smaller file.');
-                // Try to clear old data and retry
+                alert('Storage space full! Clearing old data...');
                 this.clearAllData();
+                // Try again after clearing
                 try {
-                    localStorage.setItem('jsonViewerData', JSON.stringify(dataToStore));
-                    console.log('✅ Data saved after clearing old data');
+                    localStorage.setItem('jsonViewerData', JSON.stringify(storageData));
+                    console.log('💾 Data saved after clearing old data');
                 } catch (retryError) {
                     alert('Unable to save data due to storage limitations.');
                 }
@@ -164,31 +166,123 @@ class JSONViewer {
         }
     }
 
-    // Load JSON data from localStorage on page load
     loadStoredData() {
+        console.log('🔍 Checking for stored data...');
+        
         try {
             const storedData = localStorage.getItem('jsonViewerData');
-            if (storedData) {
-                console.log('📁 Found stored data, attempting to load...');
-                const parsedData = JSON.parse(storedData);
-                if (parsedData && parsedData.data && Array.isArray(parsedData.data) && parsedData.data.length > 0) {
-                    console.log('✅ Loading stored data from:', parsedData.timestamp);
-                    console.log('📊 Data contains:', parsedData.data.length, 'items');
-                    this.loadData(parsedData.data);
-                } else {
-                    console.log('⚠️ Stored data is empty or invalid');
-                    this.hideDataSections();
-                }
-            } else {
+            
+            if (!storedData) {
                 console.log('📭 No stored data found');
-                this.hideDataSections();
+                this.hideDataUI();
+                return;
             }
+            
+            const parsedData = JSON.parse(storedData);
+            
+            if (!parsedData || !parsedData.data || !Array.isArray(parsedData.data) || parsedData.data.length === 0) {
+                console.log('⚠️ Stored data is invalid or empty');
+                this.hideDataUI();
+                return;
+            }
+            
+            console.log('✅ Found stored data from:', parsedData.timestamp);
+            console.log('📊 Loading', parsedData.data.length, 'stored items');
+            
+            this.loadDataIntoApp(parsedData.data);
+            
         } catch (error) {
             console.error('❌ Error loading stored data:', error);
-            // Clear corrupted data
             localStorage.removeItem('jsonViewerData');
-            this.hideDataSections();
+            this.hideDataUI();
         }
+    }
+
+    loadReviewedItems() {
+        try {
+            const stored = localStorage.getItem('reviewedItems');
+            this.reviewedItems = stored ? new Set(JSON.parse(stored)) : new Set();
+            console.log('📋 Loaded', this.reviewedItems.size, 'reviewed items');
+        } catch (error) {
+            console.error('❌ Error loading reviewed items:', error);
+            this.reviewedItems = new Set();
+        }
+    }
+
+    saveReviewedItems() {
+        try {
+            localStorage.setItem('reviewedItems', JSON.stringify([...this.reviewedItems]));
+        } catch (error) {
+            console.error('❌ Error saving reviewed items:', error);
+        }
+    }
+
+    showDataUI() {
+        const summarySection = document.getElementById('summarySection');
+        const noData = document.getElementById('noData');
+        
+        if (summarySection) summarySection.style.display = 'block';
+        if (noData) noData.style.display = 'none';
+    }
+
+    hideDataUI() {
+        const summarySection = document.getElementById('summarySection');
+        const noData = document.getElementById('noData');
+        const tableContainer = document.getElementById('tableContainer');
+        
+        if (summarySection) summarySection.style.display = 'none';
+        if (noData) noData.style.display = 'block';
+        
+        if (tableContainer) {
+            tableContainer.innerHTML = `
+                <div class="no-data" id="noData">
+                    <h3>No data loaded</h3>
+                    <p>Please upload a JSON file to view the results</p>
+                </div>
+            `;
+        }
+    }
+
+    clearAllData() {
+        const confirmMessage = `🗑️ CLEAR ALL DATA
+        
+This will permanently remove:
+• Your uploaded JSON file
+• All review marks  
+• All stored data
+
+Are you sure you want to continue?`;
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        console.log('🧹 Clearing all data...');
+        
+        // Clear localStorage
+        localStorage.removeItem('jsonViewerData');
+        localStorage.removeItem('reviewedItems');
+        
+        // Reset all app state
+        this.data = [];
+        this.filteredData = [];
+        this.reviewedItems = new Set();
+        this.currentReport = null;
+        
+        // Clear search input
+        const searchInput = document.getElementById('globalSearch');
+        if (searchInput) searchInput.value = '';
+        
+        // Clear all filter inputs
+        document.querySelectorAll('[data-filter]').forEach(input => {
+            input.value = '';
+        });
+        
+        // Update UI to show empty state
+        this.hideDataUI();
+        
+        console.log('✅ All data cleared successfully');
+        alert('All data has been cleared successfully!');
     }
 
     generateItemId(item) {
@@ -201,10 +295,17 @@ class JSONViewer {
         const verifiedSecrets = this.data.filter(item => item.verified).length;
         const reviewedCount = this.data.filter(item => item.reviewed).length;
 
-        document.getElementById('totalSecrets').textContent = totalSecrets;
-        document.getElementById('totalRepos').textContent = uniqueRepos;
-        document.getElementById('verifiedSecrets').textContent = verifiedSecrets;
-        document.getElementById('reviewedCount').textContent = reviewedCount;
+        const elements = {
+            totalSecrets: document.getElementById('totalSecrets'),
+            totalRepos: document.getElementById('totalRepos'),
+            verifiedSecrets: document.getElementById('verifiedSecrets'),
+            reviewedCount: document.getElementById('reviewedCount')
+        };
+
+        if (elements.totalSecrets) elements.totalSecrets.textContent = totalSecrets;
+        if (elements.totalRepos) elements.totalRepos.textContent = uniqueRepos;
+        if (elements.verifiedSecrets) elements.verifiedSecrets.textContent = verifiedSecrets;
+        if (elements.reviewedCount) elements.reviewedCount.textContent = reviewedCount;
 
         // Update detector breakdown
         const detectorCounts = {};
@@ -214,22 +315,25 @@ class JSONViewer {
         });
 
         const detectorList = document.getElementById('detectorList');
-        detectorList.innerHTML = Object.entries(detectorCounts)
-            .sort(([,a], [,b]) => b - a)
-            .map(([detector, count]) => `
-                <div class="detector-item">
-                    <span>${detector}</span>
-                    <span>${count}</span>
-                </div>
-            `).join('');
+        if (detectorList) {
+            detectorList.innerHTML = Object.entries(detectorCounts)
+                .sort(([,a], [,b]) => b - a)
+                .map(([detector, count]) => `
+                    <div class="detector-item">
+                        <span>${detector}</span>
+                        <span>${count}</span>
+                    </div>
+                `).join('');
+        }
     }
 
     renderTable() {
         const container = document.getElementById('tableContainer');
+        if (!container) return;
         
         if (this.filteredData.length === 0) {
             if (this.data.length === 0) {
-                this.hideDataSections();
+                this.hideDataUI();
             } else {
                 container.innerHTML = '<div class="no-data"><h3>No matching results</h3><p>Try adjusting your search filters</p></div>';
             }
@@ -275,14 +379,22 @@ class JSONViewer {
         container.innerHTML = '';
         container.appendChild(table);
 
-        // Add filter event listeners
+        // Add event listeners
+        this.addTableEventListeners(table);
+    }
+
+    addTableEventListeners(table) {
+        // Filter inputs
         table.querySelectorAll('[data-filter]').forEach(input => {
             input.addEventListener('input', (e) => this.handleColumnFilter(e.target.dataset.filter, e.target.value));
         });
 
-        // Add review checkbox listeners
+        // Review checkboxes
         table.querySelectorAll('.review-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => this.toggleReview(parseInt(e.target.dataset.id)));
+            checkbox.addEventListener('change', (e) => {
+                const id = parseInt(e.target.dataset.id);
+                this.toggleReview(id);
+            });
         });
     }
 
@@ -391,52 +503,20 @@ class JSONViewer {
 
     toggleReview(id) {
         const item = this.data.find(item => item.id === id);
-        if (item) {
-            item.reviewed = !item.reviewed;
-            const itemId = this.generateItemId(item);
-            
-            if (item.reviewed) {
-                this.reviewedItems.add(itemId);
-            } else {
-                this.reviewedItems.delete(itemId);
-            }
-            
-            this.saveReviewedItems();
-            this.updateSummary();
-            this.renderTable();
-        }
-    }
+        if (!item) return;
 
-    // Clear ALL data - both JSON data AND reviews, reset everything
-    clearAllData() {
-        if (confirm('🗑️ Are you sure you want to clear ALL data?\n\nThis will remove:\n• The uploaded JSON file\n• All review marks\n• All stored data\n\nThis action cannot be undone.')) {
-            
-            console.log('🧹 Clearing all data...');
-            
-            // Clear localStorage
-            localStorage.removeItem('jsonViewerData');
-            localStorage.removeItem('reviewedItems');
-            
-            // Reset all application state
-            this.data = [];
-            this.filteredData = [];
-            this.reviewedItems.clear();
-            this.currentReport = null;
-            
-            // Clear search input
-            const searchInput = document.getElementById('globalSearch');
-            if (searchInput) searchInput.value = '';
-            
-            // Clear all filter inputs
-            document.querySelectorAll('[data-filter]').forEach(input => {
-                input.value = '';
-            });
-            
-            // Hide summary and show no data message
-            this.hideDataSections();
-            
-            console.log('✅ All data cleared successfully');
+        item.reviewed = !item.reviewed;
+        const itemId = this.generateItemId(item);
+        
+        if (item.reviewed) {
+            this.reviewedItems.add(itemId);
+        } else {
+            this.reviewedItems.delete(itemId);
         }
+        
+        this.saveReviewedItems();
+        this.updateSummary();
+        this.renderTable();
     }
 
     exportData() {
@@ -471,21 +551,27 @@ class JSONViewer {
 
         const report = generateBugBountyReport(item);
         
-        // Update modal content
-        document.getElementById('reportTitle').value = report.title;
-        document.getElementById('reportSummary').value = report.summary;
-        document.getElementById('reportPOC').value = report.poc;
-        document.getElementById('reportImpact').value = report.impact;
+        const elements = {
+            title: document.getElementById('reportTitle'),
+            summary: document.getElementById('reportSummary'),
+            poc: document.getElementById('reportPOC'),
+            impact: document.getElementById('reportImpact'),
+            severityBadge: document.getElementById('severityBadge'),
+            modal: document.getElementById('reportModal')
+        };
+
+        if (elements.title) elements.title.value = report.title;
+        if (elements.summary) elements.summary.value = report.summary;
+        if (elements.poc) elements.poc.value = report.poc;
+        if (elements.impact) elements.impact.value = report.impact;
         
-        // Update severity badge
-        const severityBadge = document.getElementById('severityBadge');
-        severityBadge.textContent = report.severity;
-        severityBadge.className = `severity-badge severity-${report.severity.toLowerCase()}`;
+        if (elements.severityBadge) {
+            elements.severityBadge.textContent = report.severity;
+            elements.severityBadge.className = `severity-badge severity-${report.severity.toLowerCase()}`;
+        }
         
-        // Show modal
-        document.getElementById('reportModal').style.display = 'block';
+        if (elements.modal) elements.modal.style.display = 'block';
         
-        // Store current report for copying/downloading
         this.currentReport = report;
     }
 
@@ -577,48 +663,40 @@ class JSONViewer {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
-
-    loadReviewedItems() {
-        try {
-            const stored = localStorage.getItem('reviewedItems');
-            return stored ? new Set(JSON.parse(stored)) : new Set();
-        } catch (error) {
-            console.error('Error loading reviewed items:', error);
-            return new Set();
-        }
-    }
-
-    saveReviewedItems() {
-        try {
-            localStorage.setItem('reviewedItems', JSON.stringify([...this.reviewedItems]));
-        } catch (error) {
-            console.error('Error saving reviewed items:', error);
-        }
-    }
 }
 
-// Global functions
+// Global function for report generation
 function generateReport(id) {
     if (window.jsonViewer) {
         window.jsonViewer.showReport(id);
     }
 }
 
-// Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Initializing JSONViewer...');
+// Robust initialization
+function initializeApp() {
+    console.log('🚀 Initializing JSON Viewer App...');
+    
+    if (window.jsonViewer) {
+        console.log('⚠️ App already initialized');
+        return;
+    }
+    
     window.jsonViewer = new JSONViewer();
-});
-
-// Fallback initialization
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        if (!window.jsonViewer) {
-            console.log('🚀 Fallback initialization...');
-            window.jsonViewer = new JSONViewer();
-        }
-    });
-} else {
-    console.log('🚀 Direct initialization...');
-    window.jsonViewer = new JSONViewer();
+    console.log('✅ JSON Viewer initialized successfully');
 }
+
+// Multiple initialization approaches
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    // DOM is already ready
+    setTimeout(initializeApp, 100);
+}
+
+// Backup initialization
+window.addEventListener('load', () => {
+    if (!window.jsonViewer) {
+        console.log('🔄 Backup initialization...');
+        initializeApp();
+    }
+});
