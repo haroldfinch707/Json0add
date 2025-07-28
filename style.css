@@ -309,6 +309,15 @@ body {
     border-color: #58a6ff;
 }
 
+.upload-hint {
+    color: #7d8590;
+    font-size: 0.8rem;
+    margin-top: 8px;
+}
+
+
+
+
 /* Modal Styles */
 .modal {
     display: none;
