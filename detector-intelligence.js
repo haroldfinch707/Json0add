@@ -8,6 +8,15 @@ const DETECTOR_INTELLIGENCE = {
     poc_template: "1. Locate exposed AWS credentials\n2. Configure AWS CLI with found credentials\n3. Run 'aws sts get-caller-identity' to verify access\n4. Enumerate accessible resources with 'aws s3 ls' or 'aws ec2 describe-instances'",
     remediation: "Immediately rotate credentials in AWS IAM Console and review CloudTrail logs for unauthorized access"
   },
+
+  "IPGeolocation": {
+    "service": "IPGeolocation",
+    "category": "Geolocation",
+    "impact": "Unauthorized access to geolocation information about IP addresses, potentially leading to excessive API usage charges or data scraping of location data.",
+    "severity": "Low",
+    "poc_template": "1. Locate exposed IPGeolocation API key.\n2. Use the key to retrieve geolocation data for an IP address via the IPGeolocation API.\n3. Verify successful data retrieval.",
+    "remediation": "Rotate the IPGeolocation API key immediately."
+  },
   
   "AzureStorage": {
     service: "Microsoft Azure Storage",
