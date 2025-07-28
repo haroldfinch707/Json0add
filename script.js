@@ -3,6 +3,7 @@ class JSONViewer {
         this.data = [];
         this.filteredData = [];
         this.reviewedItems = this.loadReviewedItems();
+        this.currentReport = null;
         this.initEventListeners();
     }
 
@@ -69,12 +70,12 @@ class JSONViewer {
         // Download report
         downloadReport.addEventListener('click', () => this.downloadReport());
 
-        // Individual copy buttons
-        document.querySelectorAll('.copy-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        // Individual copy buttons - using event delegation since buttons are added dynamically
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('copy-btn')) {
                 const targetId = e.target.dataset.target;
                 this.copyToClipboard(targetId, e.target);
-            });
+            }
         });
     }
 
@@ -384,36 +385,78 @@ class JSONViewer {
 
     copyToClipboard(elementId, button) {
         const element = document.getElementById(elementId);
-        element.select();
-        document.execCommand('copy');
+        if (!element) return;
         
-        // Visual feedback
-        const originalText = button.textContent;
-        button.textContent = 'Copied!';
-        button.classList.add('copy-success');
+        // Create a temporary textarea to handle the copy operation
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = element.value;
+        document.body.appendChild(tempTextarea);
+        tempTextarea.select();
         
-        setTimeout(() => {
-            button.textContent = originalText;
-            button.classList.remove('copy-success');
-        }, 2000);
+        try {
+            document.execCommand('copy');
+            
+            // Visual feedback
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            button.classList.add('copy-success');
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('copy-success');
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+        
+        document.body.removeChild(tempTextarea);
     }
 
     copyAllReport() {
         if (!this.currentReport) return;
         
-        const fullReport = `${this.currentReport.title}\n\n${this.currentReport.summary}\n\n${this.currentReport.poc}\n\n${this.currentReport.impact}`;
+        const fullReport = `${this.currentReport.title}\n\n## Summary\n${this.currentReport.summary}\n\n## Proof of Concept\n${this.currentReport.poc}\n\n## Impact\n${this.currentReport.impact}`;
         
-        navigator.clipboard.writeText(fullReport).then(() => {
-            const btn = document.getElementById('copyAllReport');
-            const originalText = btn.textContent;
-            btn.textContent = '✅ Copied All!';
-            btn.classList.add('copy-success');
-            
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.classList.remove('copy-success');
-            }, 2000);
-        });
+        // Use modern clipboard API if available, fallback to older method
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(fullReport).then(() => {
+                this.showCopyFeedback('copyAllReport');
+            }).catch(() => {
+                this.fallbackCopyText(fullReport, 'copyAllReport');
+            });
+        } else {
+            this.fallbackCopyText(fullReport, 'copyAllReport');
+        }
+    }
+
+    fallbackCopyText(text, buttonId) {
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = text;
+        document.body.appendChild(tempTextarea);
+        tempTextarea.select();
+        
+        try {
+            document.execCommand('copy');
+            this.showCopyFeedback(buttonId);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+        
+        document.body.removeChild(tempTextarea);
+    }
+
+    showCopyFeedback(buttonId) {
+        const btn = document.getElementById(buttonId);
+        if (!btn) return;
+        
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copied All!';
+        btn.classList.add('copy-success');
+        
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.remove('copy-success');
+        }, 2000);
     }
 
     downloadReport() {
@@ -426,24 +469,50 @@ class JSONViewer {
         const a = document.createElement('a');
         a.href = url;
         a.download = `bug_bounty_report_${Date.now()}.md`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
 
     loadReviewedItems() {
-        const stored = localStorage.getItem('reviewedItems');
-        return stored ? new Set(JSON.parse(stored)) : new Set();
+        try {
+            const stored = localStorage.getItem('reviewedItems');
+            return stored ? new Set(JSON.parse(stored)) : new Set();
+        } catch (error) {
+            console.error('Error loading reviewed items:', error);
+            return new Set();
+        }
     }
 
     saveReviewedItems() {
-        localStorage.setItem('reviewedItems', JSON.stringify([...this.reviewedItems]));
+        try {
+            localStorage.setItem('reviewedItems', JSON.stringify([...this.reviewedItems]));
+        } catch (error) {
+            console.error('Error saving reviewed items:', error);
+        }
     }
 }
 
 // Global functions
 function generateReport(id) {
-    window.jsonViewer.showReport(id);
+    if (window.jsonViewer) {
+        window.jsonViewer.showReport(id);
+    }
 }
 
-// Initialize the app
-window.jsonViewer = new JSONViewer();
+// Initialize the app when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    window.jsonViewer = new JSONViewer();
+});
+
+// Fallback initialization
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!window.jsonViewer) {
+            window.jsonViewer = new JSONViewer();
+        }
+    });
+} else {
+    window.jsonViewer = new JSONViewer();
+}
