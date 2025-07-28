@@ -5,6 +5,7 @@ class JSONViewer {
         this.reviewedItems = this.loadReviewedItems();
         this.currentReport = null;
         this.initEventListeners();
+        this.loadStoredData(); // Load data on startup
     }
 
     initEventListeners() {
@@ -97,6 +98,8 @@ class JSONViewer {
             try {
                 const jsonData = JSON.parse(e.target.result);
                 this.loadData(Array.isArray(jsonData) ? jsonData : [jsonData]);
+                // Save the uploaded data to localStorage
+                this.saveDataToStorage(Array.isArray(jsonData) ? jsonData : [jsonData]);
             } catch (error) {
                 alert('Invalid JSON file: ' + error.message);
             }
@@ -115,6 +118,53 @@ class JSONViewer {
         this.renderTable();
         document.getElementById('summarySection').style.display = 'block';
         document.getElementById('noData').style.display = 'none';
+    }
+
+    // New method to save data to localStorage
+    saveDataToStorage(data) {
+        try {
+            const dataToStore = {
+                data: data,
+                timestamp: new Date().toISOString(),
+                version: '1.0'
+            };
+            localStorage.setItem('jsonViewerData', JSON.stringify(dataToStore));
+            console.log('Data saved to localStorage');
+        } catch (error) {
+            console.error('Error saving data to localStorage:', error);
+            // Handle quota exceeded error
+            if (error.name === 'QuotaExceededError') {
+                alert('Storage quota exceeded. Please clear old data or use a smaller file.');
+            }
+        }
+    }
+
+    // New method to load data from localStorage
+    loadStoredData() {
+        try {
+            const storedData = localStorage.getItem('jsonViewerData');
+            if (storedData) {
+                const parsedData = JSON.parse(storedData);
+                if (parsedData && parsedData.data && Array.isArray(parsedData.data)) {
+                    console.log('Loading stored data from:', parsedData.timestamp);
+                    this.loadData(parsedData.data);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading stored data:', error);
+            // Clear corrupted data
+            localStorage.removeItem('jsonViewerData');
+        }
+    }
+
+    // New method to clear stored data
+    clearStoredData() {
+        try {
+            localStorage.removeItem('jsonViewerData');
+            console.log('Stored data cleared');
+        } catch (error) {
+            console.error('Error clearing stored data:', error);
+        }
     }
 
     generateItemId(item) {
@@ -329,8 +379,9 @@ class JSONViewer {
         }
     }
 
+    // Modified to only clear reviews, not the data
     clearAllReviews() {
-        if (confirm('Are you sure you want to clear all review marks?')) {
+        if (confirm('Are you sure you want to clear all review marks? (This will not delete your uploaded data)')) {
             this.reviewedItems.clear();
             this.data.forEach(item => item.reviewed = false);
             this.saveReviewedItems();
