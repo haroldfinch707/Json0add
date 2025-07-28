@@ -40,6 +40,42 @@ class JSONViewer {
         globalSearch.addEventListener('input', (e) => this.handleGlobalSearch(e.target.value));
         clearReviewed.addEventListener('click', () => this.clearAllReviews());
         exportData.addEventListener('click', () => this.exportData());
+
+        // Modal event listeners
+        this.initModalEventListeners();
+    }
+
+    initModalEventListeners() {
+        const modal = document.getElementById('reportModal');
+        const closeModal = document.getElementById('closeModal');
+        const copyAllReport = document.getElementById('copyAllReport');
+        const downloadReport = document.getElementById('downloadReport');
+
+        // Close modal
+        closeModal.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Copy all report
+        copyAllReport.addEventListener('click', () => this.copyAllReport());
+
+        // Download report
+        downloadReport.addEventListener('click', () => this.downloadReport());
+
+        // Individual copy buttons
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetId = e.target.dataset.target;
+                this.copyToClipboard(targetId, e.target);
+            });
+        });
     }
 
     handleFileUpload(event) {
@@ -207,7 +243,7 @@ class JSONViewer {
                 </td>
                 <td>
                     <div class="action-buttons">
-                        <button class="btn-sm btn-view" onclick="viewDetails(${item.id})">View</button>
+                        <button class="btn-sm btn-report" onclick="generateReport(${item.id})">🐛 Report</button>
                     </div>
                 </td>
             </tr>
@@ -322,6 +358,78 @@ class JSONViewer {
         URL.revokeObjectURL(url);
     }
 
+    showReport(id) {
+        const item = this.data.find(item => item.id === id);
+        if (!item) return;
+
+        const report = generateBugBountyReport(item);
+        
+        // Update modal content
+        document.getElementById('reportTitle').value = report.title;
+        document.getElementById('reportSummary').value = report.summary;
+        document.getElementById('reportPOC').value = report.poc;
+        document.getElementById('reportImpact').value = report.impact;
+        
+        // Update severity badge
+        const severityBadge = document.getElementById('severityBadge');
+        severityBadge.textContent = report.severity;
+        severityBadge.className = `severity-badge severity-${report.severity.toLowerCase()}`;
+        
+        // Show modal
+        document.getElementById('reportModal').style.display = 'block';
+        
+        // Store current report for copying/downloading
+        this.currentReport = report;
+    }
+
+    copyToClipboard(elementId, button) {
+        const element = document.getElementById(elementId);
+        element.select();
+        document.execCommand('copy');
+        
+        // Visual feedback
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        button.classList.add('copy-success');
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.remove('copy-success');
+        }, 2000);
+    }
+
+    copyAllReport() {
+        if (!this.currentReport) return;
+        
+        const fullReport = `${this.currentReport.title}\n\n${this.currentReport.summary}\n\n${this.currentReport.poc}\n\n${this.currentReport.impact}`;
+        
+        navigator.clipboard.writeText(fullReport).then(() => {
+            const btn = document.getElementById('copyAllReport');
+            const originalText = btn.textContent;
+            btn.textContent = '✅ Copied All!';
+            btn.classList.add('copy-success');
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.classList.remove('copy-success');
+            }, 2000);
+        });
+    }
+
+    downloadReport() {
+        if (!this.currentReport) return;
+        
+        const content = `# ${this.currentReport.title}\n\n## Summary\n${this.currentReport.summary}\n\n## Proof of Concept\n${this.currentReport.poc}\n\n## Impact\n${this.currentReport.impact}`;
+        
+        const blob = new Blob([content], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bug_bounty_report_${Date.now()}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
     loadReviewedItems() {
         const stored = localStorage.getItem('reviewedItems');
         return stored ? new Set(JSON.parse(stored)) : new Set();
@@ -333,12 +441,8 @@ class JSONViewer {
 }
 
 // Global functions
-function viewDetails(id) {
-    const viewer = window.jsonViewer;
-    const item = viewer.data.find(item => item.id === id);
-    if (item) {
-        alert(JSON.stringify(item, null, 2));
-    }
+function generateReport(id) {
+    window.jsonViewer.showReport(id);
 }
 
 // Initialize the app
