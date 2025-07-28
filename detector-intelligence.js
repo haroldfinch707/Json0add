@@ -299,13 +299,14 @@ function generateBugBountyReport(secretData) {
     
     summary: `A ${intelligence.category.toLowerCase()} credential for ${intelligence.service} was found exposed in the public repository "${repoName}". The secret was detected in the file "${fileName}" and ${secretData.verified ? 'has been verified as active' : 'appears to be potentially active'}. This exposure poses a ${intelligence.severity.toLowerCase()} security risk to the organization.`,
     
-    poc: `**Proof of Concept:**\n\n${intelligence.poc_template}\n\n**Location Details:**\n- Repository: ${secretData.repo_url}\n- File: ${secretData.file_path}\n- Commit URL: ${commitUrl}`,
+    poc: `**Proof of Concept:**\n\n${intelligence.poc_template}\n\n**Location Details:**\n- Repository: ${secretData.repo_url}\n- File: ${secretData.file_path}\n- Commit URL: ${commitUrl}\n- Secret: ${secretData.raw_secret || 'N/A'}`,
     
     impact: `**Business Impact:**\n\n${intelligence.impact}\n\n**Severity:** ${intelligence.severity}\n\n**Potential Consequences:**\n- Unauthorized access to ${intelligence.service}\n- Data breach and privacy violations\n- Financial loss through resource abuse\n- Reputation damage and customer trust loss\n- Compliance violations (GDPR, PCI-DSS, etc.)\n\n**Recommended Actions:**\n${intelligence.remediation}`,
     
     severity: intelligence.severity
   };
 }
+
 
 
 // Helper functions
