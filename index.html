@@ -69,6 +69,48 @@
         </div>
     </div>
 
+    <!-- Bug Bounty Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🐛 Bug Bounty Report Generator</h2>
+                <span class="close" id="closeModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-controls">
+                    <button id="copyAllReport" class="btn btn-primary">📋 Copy All</button>
+                    <button id="downloadReport" class="btn btn-secondary">💾 Download</button>
+                    <span class="severity-badge" id="severityBadge">Medium</span>
+                </div>
+                
+                <div class="report-section">
+                    <label>📝 Title:</label>
+                    <textarea id="reportTitle" rows="2" readonly></textarea>
+                    <button class="copy-btn" data-target="reportTitle">Copy</button>
+                </div>
+                
+                <div class="report-section">
+                    <label>📋 Summary:</label>
+                    <textarea id="reportSummary" rows="4" readonly></textarea>
+                    <button class="copy-btn" data-target="reportSummary">Copy</button>
+                </div>
+                
+                <div class="report-section">
+                    <label>🔬 Proof of Concept:</label>
+                    <textarea id="reportPOC" rows="8" readonly></textarea>
+                    <button class="copy-btn" data-target="reportPOC">Copy</button>
+                </div>
+                
+                <div class="report-section">
+                    <label>💥 Impact:</label>
+                    <textarea id="reportImpact" rows="6" readonly></textarea>
+                    <button class="copy-btn" data-target="reportImpact">Copy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="detector-intelligence.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
