@@ -17,6 +17,107 @@ class JSONViewer {
         }, 200);
     }
 
+    // Custom popup methods
+    showPopup(message, type = 'info', title = '', actions = null) {
+        const popup = document.createElement('div');
+        popup.className = `custom-popup ${type}`;
+        
+        const titleText = title || this.getDefaultTitle(type);
+        
+        popup.innerHTML = `
+            <div class="popup-header">
+                <div class="popup-title">${titleText}</div>
+                <button class="popup-close">&times;</button>
+            </div>
+            <div class="popup-message">${message}</div>
+            ${actions ? `<div class="popup-actions">${actions}</div>` : ''}
+        `;
+        
+        document.body.appendChild(popup);
+        
+        // Show popup with animation
+        setTimeout(() => popup.classList.add('show'), 10);
+        
+        // Auto-hide after 5 seconds if no actions
+        if (!actions) {
+            setTimeout(() => this.hidePopup(popup), 5000);
+        }
+        
+        // Close button handler
+        popup.querySelector('.popup-close').addEventListener('click', () => {
+            this.hidePopup(popup);
+        });
+        
+        return popup;
+    }
+
+    showConfirmPopup(message, onConfirm, onCancel = null, type = 'warning') {
+        const actions = `
+            <button class="popup-btn danger" data-action="confirm">Yes, Continue</button>
+            <button class="popup-btn secondary" data-action="cancel">Cancel</button>
+        `;
+        
+        const popup = this.showPopup(message, type, 'Confirm Action', actions);
+        
+        popup.querySelector('[data-action="confirm"]').addEventListener('click', () => {
+            this.hidePopup(popup);
+            if (onConfirm) onConfirm();
+        });
+        
+        popup.querySelector('[data-action="cancel"]').addEventListener('click', () => {
+            this.hidePopup(popup);
+            if (onCancel) onCancel();
+        });
+    }
+
+    showAppendConfirmPopup(existingCount, newCount, onAppend, onReplace) {
+        const message = `You already have <strong>${existingCount}</strong> items loaded.<br><br>
+            <strong>Choose your action:</strong><br>
+            • <strong>Add to Top</strong> - Add the new ${newCount} items to the beginning<br>
+            • <strong>Replace All</strong> - Replace existing data with new data`;
+        
+        const actions = `
+            <button class="popup-btn primary" data-action="append">📎 Add to Top</button>
+            <button class="popup-btn secondary" data-action="replace">🔄 Replace All</button>
+            <button class="popup-btn secondary" data-action="cancel">❌ Cancel</button>
+        `;
+        
+        const popup = this.showPopup(message, 'info', 'File Upload Options', actions);
+        
+        popup.querySelector('[data-action="append"]').addEventListener('click', () => {
+            this.hidePopup(popup);
+            if (onAppend) onAppend();
+        });
+        
+        popup.querySelector('[data-action="replace"]').addEventListener('click', () => {
+            this.hidePopup(popup);
+            if (onReplace) onReplace();
+        });
+        
+        popup.querySelector('[data-action="cancel"]').addEventListener('click', () => {
+            this.hidePopup(popup);
+        });
+    }
+
+    hidePopup(popup) {
+        popup.classList.remove('show');
+        setTimeout(() => {
+            if (popup.parentNode) {
+                popup.parentNode.removeChild(popup);
+            }
+        }, 300);
+    }
+
+    getDefaultTitle(type) {
+        const titles = {
+            success: '✅ Success',
+            error: '❌ Error',
+            warning: '⚠️ Warning',
+            info: 'ℹ️ Information'
+        };
+        return titles[type] || 'Notification';
+    }
+
     initEventListeners() {
         console.log('🎯 Initializing event listeners');
         
@@ -95,7 +196,7 @@ class JSONViewer {
 
     processFile(file) {
         if (!file.name.toLowerCase().endsWith('.json')) {
-            alert('Please upload a JSON file');
+            this.showPopup('Please upload a JSON file', 'error');
             return;
         }
 
@@ -109,22 +210,16 @@ class JSONViewer {
                 
                 // Check if we have existing data
                 if (this.data.length > 0) {
-                    // Ask user if they want to append or replace
-                    const appendChoice = confirm(
-                        `You already have ${this.data.length} items loaded.\n\n` +
-                        `• Click "OK" to ADD the new ${newDataArray.length} items to the top\n` +
-                        `• Click "Cancel" to REPLACE all existing data\n\n` +
-                        `Choose your action:`
+                    // Show custom append confirmation popup
+                    this.showAppendConfirmPopup(
+                        this.data.length,
+                        newDataArray.length,
+                        () => this.appendDataToTop(newDataArray),
+                        () => {
+                            this.loadDataIntoApp(newDataArray);
+                            this.saveToLocalStorage(newDataArray);
+                        }
                     );
-                    
-                    if (appendChoice) {
-                        // Append new data to the top
-                        this.appendDataToTop(newDataArray);
-                    } else {
-                        // Replace existing data
-                        this.loadDataIntoApp(newDataArray);
-                        this.saveToLocalStorage(newDataArray);
-                    }
                 } else {
                     // No existing data, just load normally
                     this.loadDataIntoApp(newDataArray);
@@ -133,7 +228,7 @@ class JSONViewer {
                 
             } catch (error) {
                 console.error('❌ JSON parsing error:', error);
-                alert('Invalid JSON file: ' + error.message);
+                this.showPopup(`Invalid JSON file: ${error.message}`, 'error');
             }
         };
         reader.readAsText(file);
@@ -154,7 +249,10 @@ class JSONViewer {
         this.saveToLocalStorage(combinedRawData);
         
         console.log('✅ Data appended successfully. Total items:', this.data.length);
-        alert(`✅ Added ${newDataArray.length} new items to the top!\nTotal items: ${this.data.length}`);
+        this.showPopup(
+            `Added <strong>${newDataArray.length}</strong> new items to the top!<br>Total items: <strong>${this.data.length}</strong>`,
+            'success'
+        );
     }
 
     // New helper method to get raw data array (without processed fields)
@@ -200,14 +298,15 @@ class JSONViewer {
             console.error('❌ Failed to save to localStorage:', error);
             
             if (error.name === 'QuotaExceededError') {
-                alert('Storage space full! Clearing old data...');
+                this.showPopup('Storage space full! Clearing old data...', 'warning');
                 this.clearAllData();
                 // Try again after clearing
                 try {
                     localStorage.setItem('jsonViewerData', JSON.stringify(storageData));
                     console.log('💾 Data saved after clearing old data');
+                    this.showPopup('Data saved after clearing old data', 'success');
                 } catch (retryError) {
-                    alert('Unable to save data due to storage limitations.');
+                    this.showPopup('Unable to save data due to storage limitations.', 'error');
                 }
             }
         }
@@ -295,45 +394,45 @@ class JSONViewer {
     }
 
     clearAllData() {
-        const confirmMessage = `🗑️ CLEAR ALL DATA
-        
-This will permanently remove:
-• Your uploaded JSON file(s)
-• All review marks  
-• All stored data
+        const message = `This will permanently remove:<br>
+            • Your uploaded JSON file(s)<br>
+            • All review marks<br>
+            • All stored data<br><br>
+            <strong>This action cannot be undone.</strong>`;
 
-Are you sure you want to continue?`;
-
-        if (!confirm(confirmMessage)) {
-            return;
-        }
-        
-        console.log('🧹 Clearing all data...');
-        
-        // Clear localStorage
-        localStorage.removeItem('jsonViewerData');
-        localStorage.removeItem('reviewedItems');
-        
-        // Reset all app state
-        this.data = [];
-        this.filteredData = [];
-        this.reviewedItems = new Set();
-        this.currentReport = null;
-        
-        // Clear search input
-        const searchInput = document.getElementById('globalSearch');
-        if (searchInput) searchInput.value = '';
-        
-        // Clear all filter inputs
-        document.querySelectorAll('[data-filter]').forEach(input => {
-            input.value = '';
-        });
-        
-        // Update UI to show empty state
-        this.hideDataUI();
-        
-        console.log('✅ All data cleared successfully');
-        alert('All data has been cleared successfully!');
+        this.showConfirmPopup(
+            message,
+            () => {
+                console.log('🧹 Clearing all data...');
+                
+                // Clear localStorage
+                localStorage.removeItem('jsonViewerData');
+                localStorage.removeItem('reviewedItems');
+                
+                // Reset all app state
+                this.data = [];
+                this.filteredData = [];
+                this.reviewedItems = new Set();
+                this.currentReport = null;
+                
+                // Clear search input
+                const searchInput = document.getElementById('globalSearch');
+                if (searchInput) searchInput.value = '';
+                
+                // Clear all filter inputs
+                document.querySelectorAll('[data-filter]').forEach(input => {
+                    input.value = '';
+                });
+                
+                // Update UI to show empty state
+                this.hideDataUI();
+                
+                console.log('✅ All data cleared successfully');
+                this.showPopup('All data has been cleared successfully!', 'success');
+            },
+            null,
+            'warning'
+        );
     }
 
     generateItemId(item) {
@@ -572,7 +671,7 @@ Are you sure you want to continue?`;
 
     exportData() {
         if (this.data.length === 0) {
-            alert('No data to export. Please upload a JSON file first.');
+            this.showPopup('No data to export. Please upload a JSON file first.', 'warning');
             return;
         }
 
@@ -594,6 +693,8 @@ Are you sure you want to continue?`;
         a.download = `security_scan_export_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         URL.revokeObjectURL(url);
+        
+        this.showPopup('Data exported successfully!', 'success');
     }
 
     showReport(id) {
@@ -713,6 +814,8 @@ Are you sure you want to continue?`;
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        
+        this.showPopup('Report downloaded successfully!', 'success');
     }
 }
 
