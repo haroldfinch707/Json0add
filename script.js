@@ -2,22 +2,29 @@ class JSONViewer {
     constructor() {
         this.data = [];
         this.filteredData = [];
+        this.displayedData = [];
         this.reviewedItems = new Set();
         this.currentReport = null;
+        this.currentPage = 1;
+        this.itemsPerPage = 100;
+        this.sortColumn = null;
+        this.sortDirection = 'asc';
+        this.activeQuickFilter = 'all';
+        this.searchOptions = {
+            caseSensitive: false,
+            regex: false
+        };
         
         console.log('🚀 JSONViewer constructor called');
-        
-        // Initialize everything in the correct order
         this.initEventListeners();
         
-        // Load data after a short delay to ensure DOM is ready
         setTimeout(() => {
             this.loadReviewedItems();
             this.loadStoredData();
         }, 200);
     }
 
-    // Custom popup methods
+    // Enhanced popup system
     showPopup(message, type = 'info', title = '', actions = null) {
         const popup = document.createElement('div');
         popup.className = `custom-popup ${type}`;
@@ -34,16 +41,12 @@ class JSONViewer {
         `;
         
         document.body.appendChild(popup);
-        
-        // Show popup with animation
         setTimeout(() => popup.classList.add('show'), 10);
         
-        // Auto-hide after 5 seconds if no actions
         if (!actions) {
             setTimeout(() => this.hidePopup(popup), 5000);
         }
         
-        // Close button handler
         popup.querySelector('.popup-close').addEventListener('click', () => {
             this.hidePopup(popup);
         });
@@ -53,8 +56,8 @@ class JSONViewer {
 
     showConfirmPopup(message, onConfirm, onCancel = null, type = 'warning') {
         const actions = `
-            <button class="popup-btn danger" data-action="confirm">Yes, Continue</button>
-            <button class="popup-btn secondary" data-action="cancel">Cancel</button>
+            <button class="popup-btn btn-danger" data-action="confirm">Yes, Continue</button>
+            <button class="popup-btn btn-secondary" data-action="cancel">Cancel</button>
         `;
         
         const popup = this.showPopup(message, type, 'Confirm Action', actions);
@@ -77,9 +80,9 @@ class JSONViewer {
             • <strong>Replace All</strong> - Replace existing data with new data`;
         
         const actions = `
-            <button class="popup-btn primary" data-action="append">📎 Add to Top</button>
-            <button class="popup-btn secondary" data-action="replace">🔄 Replace All</button>
-            <button class="popup-btn secondary" data-action="cancel">❌ Cancel</button>
+            <button class="popup-btn btn-primary" data-action="append">📎 Add to Top</button>
+            <button class="popup-btn btn-secondary" data-action="replace">🔄 Replace All</button>
+            <button class="popup-btn btn-secondary" data-action="cancel">❌ Cancel</button>
         `;
         
         const popup = this.showPopup(message, 'info', 'File Upload Options', actions);
@@ -124,39 +127,121 @@ class JSONViewer {
         const fileInput = document.getElementById('fileInput');
         const uploadArea = document.getElementById('uploadArea');
         const globalSearch = document.getElementById('globalSearch');
+        const clearSearch = document.getElementById('clearSearch');
+        const caseSensitive = document.getElementById('caseSensitive');
+        const regexSearch = document.getElementById('regexSearch');
         const clearReviewed = document.getElementById('clearReviewed');
         const exportData = document.getElementById('exportData');
+        const itemsPerPage = document.getElementById('itemsPerPage');
+        const prevPage = document.getElementById('prevPage');
+        const nextPage = document.getElementById('nextPage');
 
         // File upload handlers
         uploadArea?.addEventListener('click', () => fileInput.click());
         fileInput?.addEventListener('change', (e) => this.handleFileUpload(e));
 
-        // Drag and drop
+        // Enhanced drag and drop
         uploadArea?.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
         });
 
-        uploadArea?.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
+        uploadArea?.addEventListener('dragleave', (e) => {
+            if (!uploadArea.contains(e.relatedTarget)) {
+                uploadArea.classList.remove('dragover');
+            }
         });
 
         uploadArea?.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
+            const files = Array.from(e.dataTransfer.files).filter(file => 
+                file.name.toLowerCase().endsWith('.json')
+            );
             if (files.length > 0) {
-                this.processFile(files[0]);
+                this.processMultipleFiles(files);
+            } else {
+                this.showPopup('Please drop only JSON files', 'error');
             }
         });
 
-        // Search and controls
-        globalSearch?.addEventListener('input', (e) => this.handleGlobalSearch(e.target.value));
+        // Enhanced search functionality
+        let searchTimeout;
+        globalSearch?.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                this.handleGlobalSearch(e.target.value);
+            }, 300);
+        });
+
+        clearSearch?.addEventListener('click', () => {
+            globalSearch.value = '';
+            this.handleGlobalSearch('');
+        });
+
+        caseSensitive?.addEventListener('change', (e) => {
+            this.searchOptions.caseSensitive = e.target.checked;
+            this.handleGlobalSearch(globalSearch?.value || '');
+        });
+
+        regexSearch?.addEventListener('change', (e) => {
+            this.searchOptions.regex = e.target.checked;
+            this.handleGlobalSearch(globalSearch?.value || '');
+        });
+
+        // Controls
         clearReviewed?.addEventListener('click', () => this.clearAllData());
         exportData?.addEventListener('click', () => this.exportData());
 
-        // Modal event listeners
+        // Pagination
+        itemsPerPage?.addEventListener('change', (e) => {
+            this.itemsPerPage = e.target.value === 'all' ? 'all' : parseInt(e.target.value);
+            this.currentPage = 1;
+            this.updateDisplayedData();
+            this.renderTable();
+            this.updatePagination();
+        });
+
+        prevPage?.addEventListener('click', () => {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                this.updateDisplayedData();
+                this.renderTable();
+                this.updatePagination();
+            }
+        });
+
+        nextPage?.addEventListener('click', () => {
+            const totalPages = this.getTotalPages();
+            if (this.currentPage < totalPages) {
+                this.currentPage++;
+                this.updateDisplayedData();
+                this.renderTable();
+                this.updatePagination();
+            }
+        });
+
+        // Quick filters
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('filter-btn')) {
+                this.handleQuickFilter(e.target.dataset.filter);
+            }
+        });
+
+        // Modal handlers
         this.initModalEventListeners();
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                globalSearch?.focus();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+                e.preventDefault();
+                this.exportData();
+            }
+        });
     }
 
     initModalEventListeners() {
@@ -178,7 +263,6 @@ class JSONViewer {
         copyAllReport?.addEventListener('click', () => this.copyAllReport());
         downloadReport?.addEventListener('click', () => this.downloadReport());
 
-        // Individual copy buttons
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('copy-btn')) {
                 const targetId = e.target.dataset.target;
@@ -188,63 +272,79 @@ class JSONViewer {
     }
 
     handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (file) {
-            this.processFile(file);
-        }
-    }
-
-    processFile(file) {
-        if (!file.name.toLowerCase().endsWith('.json')) {
-            this.showPopup('Please upload a JSON file', 'error');
+        const files = Array.from(event.target.files).filter(file => 
+            file.name.toLowerCase().endsWith('.json')
+        );
+        
+        if (files.length === 0) {
+            this.showPopup('Please select JSON files only', 'error');
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const jsonData = JSON.parse(e.target.result);
-                const newDataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
-                
-                console.log('📁 Processing new file with', newDataArray.length, 'items');
-                
-                // Check if we have existing data
-                if (this.data.length > 0) {
-                    // Show custom append confirmation popup
-                    this.showAppendConfirmPopup(
-                        this.data.length,
-                        newDataArray.length,
-                        () => this.appendDataToTop(newDataArray),
-                        () => {
-                            this.loadDataIntoApp(newDataArray);
-                            this.saveToLocalStorage(newDataArray);
-                        }
-                    );
-                } else {
-                    // No existing data, just load normally
-                    this.loadDataIntoApp(newDataArray);
-                    this.saveToLocalStorage(newDataArray);
-                }
-                
-            } catch (error) {
-                console.error('❌ JSON parsing error:', error);
-                this.showPopup(`Invalid JSON file: ${error.message}`, 'error');
-            }
-        };
-        reader.readAsText(file);
+        this.processMultipleFiles(files);
     }
 
-    // New method to append data to the top
+    async processMultipleFiles(files) {
+        try {
+            let allData = [];
+            let processedCount = 0;
+
+            for (const file of files) {
+                try {
+                    const data = await this.readFile(file);
+                    const jsonData = JSON.parse(data);
+                    const dataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
+                    allData.push(...dataArray);
+                    processedCount++;
+                } catch (error) {
+                    console.error(`Error processing ${file.name}:`, error);
+                    this.showPopup(`Error in ${file.name}: ${error.message}`, 'error');
+                }
+            }
+
+            if (allData.length === 0) {
+                this.showPopup('No valid data found in the uploaded files', 'error');
+                return;
+            }
+
+            console.log('📁 Processing', allData.length, 'items from', processedCount, 'files');
+
+            if (this.data.length > 0) {
+                this.showAppendConfirmPopup(
+                    this.data.length,
+                    allData.length,
+                    () => this.appendDataToTop(allData),
+                    () => {
+                        this.loadDataIntoApp(allData);
+                        this.saveToLocalStorage(allData);
+                    }
+                );
+            } else {
+                this.loadDataIntoApp(allData);
+                this.saveToLocalStorage(allData);
+            }
+
+        } catch (error) {
+            console.error('❌ File processing error:', error);
+            this.showPopup(`Error processing files: ${error.message}`, 'error');
+        }
+    }
+
+    readFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsText(file);
+        });
+    }
+
     appendDataToTop(newDataArray) {
         console.log('📎 Appending', newDataArray.length, 'new items to the top');
         
-        // Get current raw data without the processed fields
         const existingRawData = this.getRawDataArray();
-        
-        // Combine new data at the top with existing data
         const combinedRawData = [...newDataArray, ...existingRawData];
         
-        // Reload with combined data
         this.loadDataIntoApp(combinedRawData);
         this.saveToLocalStorage(combinedRawData);
         
@@ -255,10 +355,8 @@ class JSONViewer {
         );
     }
 
-    // New helper method to get raw data array (without processed fields)
     getRawDataArray() {
         return this.data.map(item => {
-            // Remove processed fields and return original data
             const { id, reviewed, ...rawItem } = item;
             return rawItem;
         });
@@ -274,10 +372,12 @@ class JSONViewer {
         }));
         
         this.filteredData = [...this.data];
+        this.currentPage = 1;
+        this.updateDisplayedData();
         
-        // Update UI
         this.updateSummary();
         this.renderTable();
+        this.updatePagination();
         this.showDataUI();
         
         console.log('✅ Data loaded successfully');
@@ -288,7 +388,7 @@ class JSONViewer {
             const storageData = {
                 data: rawDataArray,
                 timestamp: new Date().toISOString(),
-                version: '1.0'
+                version: '1.1'
             };
             
             localStorage.setItem('jsonViewerData', JSON.stringify(storageData));
@@ -300,7 +400,6 @@ class JSONViewer {
             if (error.name === 'QuotaExceededError') {
                 this.showPopup('Storage space full! Clearing old data...', 'warning');
                 this.clearAllData();
-                // Try again after clearing
                 try {
                     localStorage.setItem('jsonViewerData', JSON.stringify(storageData));
                     console.log('💾 Data saved after clearing old data');
@@ -326,7 +425,7 @@ class JSONViewer {
             
             const parsedData = JSON.parse(storedData);
             
-            if (!parsedData || !parsedData.data || !Array.isArray(parsedData.data) || parsedData.data.length === 0) {
+            if (!parsedData?.data || !Array.isArray(parsedData.data) || parsedData.data.length === 0) {
                 console.log('⚠️ Stored data is invalid or empty');
                 this.hideDataUI();
                 return;
@@ -364,25 +463,19 @@ class JSONViewer {
     }
 
     showDataUI() {
-        const summarySection = document.getElementById('summarySection');
-        const noData = document.getElementById('noData');
-        const uploadHint = document.getElementById('uploadHint');
-        
-        if (summarySection) summarySection.style.display = 'block';
-        if (noData) noData.style.display = 'none';
-        if (uploadHint) uploadHint.style.display = 'block';
+        document.getElementById('summarySection')?.style.setProperty('display', 'block');
+        document.getElementById('noData')?.style.setProperty('display', 'none');
+        document.getElementById('uploadHint')?.style.setProperty('display', 'block');
+        document.getElementById('pagination')?.style.setProperty('display', 'flex');
     }
 
     hideDataUI() {
-        const summarySection = document.getElementById('summarySection');
-        const noData = document.getElementById('noData');
+        document.getElementById('summarySection')?.style.setProperty('display', 'none');
+        document.getElementById('noData')?.style.setProperty('display', 'block');
+        document.getElementById('uploadHint')?.style.setProperty('display', 'none');
+        document.getElementById('pagination')?.style.setProperty('display', 'none');
+        
         const tableContainer = document.getElementById('tableContainer');
-        const uploadHint = document.getElementById('uploadHint');
-        
-        if (summarySection) summarySection.style.display = 'none';
-        if (noData) noData.style.display = 'block';
-        if (uploadHint) uploadHint.style.display = 'none';
-        
         if (tableContainer) {
             tableContainer.innerHTML = `
                 <div class="no-data" id="noData">
@@ -405,26 +498,31 @@ class JSONViewer {
             () => {
                 console.log('🧹 Clearing all data...');
                 
-                // Clear localStorage
                 localStorage.removeItem('jsonViewerData');
                 localStorage.removeItem('reviewedItems');
                 
-                // Reset all app state
                 this.data = [];
                 this.filteredData = [];
+                this.displayedData = [];
                 this.reviewedItems = new Set();
                 this.currentReport = null;
+                this.currentPage = 1;
+                this.activeQuickFilter = 'all';
                 
-                // Clear search input
+                // Clear inputs
                 const searchInput = document.getElementById('globalSearch');
                 if (searchInput) searchInput.value = '';
                 
-                // Clear all filter inputs
                 document.querySelectorAll('[data-filter]').forEach(input => {
                     input.value = '';
                 });
                 
-                // Update UI to show empty state
+                // Reset filter buttons
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector('.filter-btn[data-filter="all"]')?.classList.add('active');
+                
                 this.hideDataUI();
                 
                 console.log('✅ All data cleared successfully');
@@ -445,17 +543,10 @@ class JSONViewer {
         const verifiedSecrets = this.data.filter(item => item.verified).length;
         const reviewedCount = this.data.filter(item => item.reviewed).length;
 
-        const elements = {
-            totalSecrets: document.getElementById('totalSecrets'),
-            totalRepos: document.getElementById('totalRepos'),
-            verifiedSecrets: document.getElementById('verifiedSecrets'),
-            reviewedCount: document.getElementById('reviewedCount')
-        };
-
-        if (elements.totalSecrets) elements.totalSecrets.textContent = totalSecrets;
-        if (elements.totalRepos) elements.totalRepos.textContent = uniqueRepos;
-        if (elements.verifiedSecrets) elements.verifiedSecrets.textContent = verifiedSecrets;
-        if (elements.reviewedCount) elements.reviewedCount.textContent = reviewedCount;
+        document.getElementById('totalSecrets')?.textContent = totalSecrets;
+        document.getElementById('totalRepos')?.textContent = uniqueRepos;
+        document.getElementById('verifiedSecrets')?.textContent = verifiedSecrets;
+        document.getElementById('reviewedCount')?.textContent = reviewedCount;
 
         // Update detector breakdown
         const detectorCounts = {};
@@ -477,11 +568,120 @@ class JSONViewer {
         }
     }
 
+    // Enhanced search with better performance and options
+    handleGlobalSearch(query) {
+        if (!query.trim()) {
+            this.filteredData = [...this.data];
+        } else {
+            try {
+                const searchTerm = this.searchOptions.caseSensitive ? query : query.toLowerCase();
+                
+                if (this.searchOptions.regex) {
+                    const regex = new RegExp(searchTerm, this.searchOptions.caseSensitive ? 'g' : 'gi');
+                    this.filteredData = this.data.filter(item => 
+                        regex.test(JSON.stringify(item))
+                    );
+                } else {
+                    this.filteredData = this.data.filter(item => {
+                        const itemStr = this.searchOptions.caseSensitive ? 
+                            JSON.stringify(item) : 
+                            JSON.stringify(item).toLowerCase();
+                        return itemStr.includes(searchTerm);
+                    });
+                }
+            } catch (error) {
+                // Invalid regex
+                this.showPopup('Invalid regular expression', 'error');
+                return;
+            }
+        }
+        
+        this.applyQuickFilter();
+        this.currentPage = 1;
+        this.updateDisplayedData();
+        this.renderTable();
+        this.updatePagination();
+    }
+
+    // Quick filter functionality
+    handleQuickFilter(filter) {
+        // Update active button
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`.filter-btn[data-filter="${filter}"]`)?.classList.add('active');
+        
+        this.activeQuickFilter = filter;
+        this.applyQuickFilter();
+        this.currentPage = 1;
+        this.updateDisplayedData();
+        this.renderTable();
+        this.updatePagination();
+    }
+
+    applyQuickFilter() {
+        let baseData = this.filteredData;
+        
+        switch (this.activeQuickFilter) {
+            case 'verified':
+                this.filteredData = baseData.filter(item => item.verified);
+                break;
+            case 'unverified':
+                this.filteredData = baseData.filter(item => !item.verified);
+                break;
+            case 'reviewed':
+                this.filteredData = baseData.filter(item => item.reviewed);
+                break;
+            case 'unreviewed':
+                this.filteredData = baseData.filter(item => !item.reviewed);
+                break;
+            case 'all':
+            default:
+                // Already filtered by search, no additional filter needed
+                break;
+        }
+    }
+
+    // Pagination functionality
+    getTotalPages() {
+        if (this.itemsPerPage === 'all') return 1;
+        return Math.ceil(this.filteredData.length / this.itemsPerPage);
+    }
+
+    updateDisplayedData() {
+        if (this.itemsPerPage === 'all') {
+            this.displayedData = [...this.filteredData];
+        } else {
+            const start = (this.currentPage - 1) * this.itemsPerPage;
+            const end = start + this.itemsPerPage;
+            this.displayedData = this.filteredData.slice(start, end);
+        }
+    }
+
+    updatePagination() {
+        const totalPages = this.getTotalPages();
+        const pageInfo = document.getElementById('pageInfo');
+        const prevBtn = document.getElementById('prevPage');
+        const nextBtn = document.getElementById('nextPage');
+        
+        if (pageInfo) {
+            if (this.itemsPerPage === 'all') {
+                pageInfo.textContent = `Showing all ${this.filteredData.length} items`;
+            } else {
+                pageInfo.textContent = `Page ${this.currentPage} of ${totalPages} (${this.filteredData.length} items)`;
+            }
+        }
+        
+        if (prevBtn) prevBtn.disabled = this.currentPage <= 1 || this.itemsPerPage === 'all';
+        if (nextBtn) nextBtn.disabled = this.currentPage >= totalPages || this.itemsPerPage === 'all';
+    }
+
+    // Enhanced table rendering with sorting
     renderTable() {
         const container = document.getElementById('tableContainer');
         if (!container) return;
         
-        if (this.filteredData.length === 0) {
+        if (this.displayedData.length === 0) {
             if (this.data.length === 0) {
                 this.hideDataUI();
             } else {
@@ -493,18 +693,18 @@ class JSONViewer {
         const table = document.createElement('table');
         table.className = 'data-table';
         
-        // Create header
+        // Create header with sorting
         const thead = document.createElement('thead');
         thead.innerHTML = `
             <tr>
                 <th>✓</th>
-                <th>Repository</th>
-                <th>Author</th>
-                <th>Commit</th>
-                <th>Filename</th>
-                <th>Secret</th>
-                <th>Detector</th>
-                <th>Verified</th>
+                <th class="sortable" data-sort="repo_url">Repository</th>
+                <th class="sortable" data-sort="email">Author</th>
+                <th class="sortable" data-sort="commit">Commit</th>
+                <th class="sortable" data-sort="file_path">Filename</th>
+                <th class="sortable" data-sort="raw_secret">Secret</th>
+                <th class="sortable" data-sort="detector">Detector</th>
+                <th class="sortable" data-sort="verified">Verified</th>
                 <th>Actions</th>
             </tr>
             <tr class="filter-row">
@@ -520,9 +720,20 @@ class JSONViewer {
             </tr>
         `;
 
+        // Update sort indicators
+        const sortHeaders = thead.querySelectorAll('.sortable');
+        sortHeaders.forEach(th => {
+            if (th.dataset.sort === this.sortColumn) {
+                th.classList.remove('sort-asc', 'sort-desc');
+                th.classList.add(`sort-${this.sortDirection}`);
+            } else {
+                th.classList.remove('sort-asc', 'sort-desc');
+            }
+        });
+
         // Create body
         const tbody = document.createElement('tbody');
-        tbody.innerHTML = this.filteredData.map(item => this.createTableRow(item)).join('');
+        tbody.innerHTML = this.displayedData.map(item => this.createTableRow(item)).join('');
 
         table.appendChild(thead);
         table.appendChild(tbody);
@@ -534,6 +745,22 @@ class JSONViewer {
     }
 
     addTableEventListeners(table) {
+        // Sort handlers
+        table.querySelectorAll('.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const column = th.dataset.sort;
+                if (this.sortColumn === column) {
+                    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortColumn = column;
+                    this.sortDirection = 'asc';
+                }
+                this.sortData();
+                this.updateDisplayedData();
+                this.renderTable();
+            });
+        });
+
         // Filter inputs
         table.querySelectorAll('[data-filter]').forEach(input => {
             input.addEventListener('input', (e) => this.handleColumnFilter(e.target.dataset.filter, e.target.value));
@@ -548,12 +775,33 @@ class JSONViewer {
         });
     }
 
+    sortData() {
+        this.filteredData.sort((a, b) => {
+            let aVal = a[this.sortColumn] || '';
+            let bVal = b[this.sortColumn] || '';
+            
+            // Handle different data types
+            if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+            if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+            
+            if (this.sortColumn === 'verified') {
+                aVal = a.verified ? 1 : 0;
+                bVal = b.verified ? 1 : 0;
+            }
+            
+            if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+            if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
     createTableRow(item) {
         const repoName = this.extractRepoName(item.repo_url);
         const authorName = this.extractAuthorName(item.email);
         const shortCommit = (item.commit || '').substring(0, 8);
         const fileName = this.extractFileName(item.file_path);
-        const shortSecret = (item.raw_secret || '').substring(0, 16) + '...';
+        const shortSecret = (item.raw_secret || '').length > 16 ? 
+            (item.raw_secret || '').substring(0, 16) + '...' : (item.raw_secret || '');
 
         return `
             <tr class="${item.reviewed ? 'reviewed-row' : ''}">
@@ -573,7 +821,7 @@ class JSONViewer {
                     </a>
                 </td>
                 <td title="${item.file_path}">${fileName}</td>
-                <td title="${item.raw_secret}">${shortSecret}</td>
+                <td title="${item.raw_secret}" class="secret-cell">${shortSecret}</td>
                 <td>
                     <span class="detector-badge">${item.detector || 'Unknown'}</span>
                 </td>
@@ -593,8 +841,12 @@ class JSONViewer {
 
     extractRepoName(url) {
         if (!url) return 'Unknown';
-        const parts = url.split('/');
-        return parts.length >= 2 ? parts[parts.length - 1] : url;
+        try {
+            const parts = url.replace(/\.git$/, '').split('/');
+            return parts.length >= 2 ? parts[parts.length - 1] : url;
+        } catch {
+            return url;
+        }
     }
 
     extractAuthorName(email) {
@@ -605,19 +857,7 @@ class JSONViewer {
 
     extractFileName(path) {
         if (!path) return 'Unknown';
-        return path.split('/').pop();
-    }
-
-    handleGlobalSearch(query) {
-        if (!query.trim()) {
-            this.filteredData = [...this.data];
-        } else {
-            const searchTerm = query.toLowerCase();
-            this.filteredData = this.data.filter(item => 
-                JSON.stringify(item).toLowerCase().includes(searchTerm)
-            );
-        }
-        this.renderTable();
+        return path.split('/').pop() || path;
     }
 
     handleColumnFilter(column, value) {
@@ -648,7 +888,12 @@ class JSONViewer {
                 }
             });
         });
+        
+        this.applyQuickFilter();
+        this.currentPage = 1;
+        this.updateDisplayedData();
         this.renderTable();
+        this.updatePagination();
     }
 
     toggleReview(id) {
@@ -666,6 +911,14 @@ class JSONViewer {
         
         this.saveReviewedItems();
         this.updateSummary();
+        
+        // Update filtered data as well
+        const filteredItem = this.filteredData.find(fItem => fItem.id === id);
+        if (filteredItem) {
+            filteredItem.reviewed = item.reviewed;
+        }
+        
+        this.updateDisplayedData();
         this.renderTable();
     }
 
@@ -676,54 +929,101 @@ class JSONViewer {
         }
 
         const exportData = {
-            summary: {
+            metadata: {
                 totalSecrets: this.data.length,
                 reviewedCount: this.data.filter(item => item.reviewed).length,
-                exportDate: new Date().toISOString()
+                verifiedCount: this.data.filter(item => item.verified).length,
+                exportDate: new Date().toISOString(),
+                version: '1.1'
             },
-            reviewed: this.data.filter(item => item.reviewed),
-            unreviewed: this.data.filter(item => !item.reviewed),
-            all: this.data
+            summary: {
+                detectors: this.getDetectorSummary(),
+                repositories: this.getRepositorySummary()
+            },
+            data: {
+                reviewed: this.data.filter(item => item.reviewed),
+                unreviewed: this.data.filter(item => !item.reviewed),
+                verified: this.data.filter(item => item.verified),
+                unverified: this.data.filter(item => !item.verified),
+                all: this.data
+            }
         };
 
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `security_scan_export_${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `security_scan_export_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
         a.click();
         URL.revokeObjectURL(url);
         
-        this.showPopup('Data exported successfully!', 'success');
+        this.showPopup(`Data exported successfully!<br>Total: ${this.data.length} items`, 'success');
+    }
+
+    getDetectorSummary() {
+        const summary = {};
+        this.data.forEach(item => {
+            const detector = item.detector || 'Unknown';
+            if (!summary[detector]) {
+                summary[detector] = { total: 0, verified: 0, reviewed: 0 };
+            }
+            summary[detector].total++;
+            if (item.verified) summary[detector].verified++;
+            if (item.reviewed) summary[detector].reviewed++;
+        });
+        return summary;
+    }
+
+    getRepositorySummary() {
+        const summary = {};
+        this.data.forEach(item => {
+            const repo = item.repo_url || 'Unknown';
+            if (!summary[repo]) {
+                summary[repo] = { total: 0, verified: 0, reviewed: 0 };
+            }
+            summary[repo].total++;
+            if (item.verified) summary[repo].verified++;
+            if (item.reviewed) summary[repo].reviewed++;
+        });
+        return summary;
     }
 
     showReport(id) {
         const item = this.data.find(item => item.id === id);
         if (!item) return;
 
-        const report = generateBugBountyReport(item);
-        
-        const elements = {
-            title: document.getElementById('reportTitle'),
-            summary: document.getElementById('reportSummary'),
-            poc: document.getElementById('reportPOC'),
-            impact: document.getElementById('reportImpact'),
-            severityBadge: document.getElementById('severityBadge'),
-            modal: document.getElementById('reportModal')
-        };
-
-        if (elements.title) elements.title.value = report.title;
-        if (elements.summary) elements.summary.value = report.summary;
-        if (elements.poc) elements.poc.value = report.poc;
-        if (elements.impact) elements.impact.value = report.impact;
-        
-        if (elements.severityBadge) {
-            elements.severityBadge.textContent = report.severity;
-            elements.severityBadge.className = `severity-badge severity-${report.severity.toLowerCase()}`;
+        // Check if detector-intelligence.js is available
+        if (typeof generateBugBountyReport === 'function') {
+            const report = generateBugBountyReport(item);
+            this.displayReport(report);
+        } else {
+            // Fallback basic report
+            const report = this.generateBasicReport(item);
+            this.displayReport(report);
         }
+    }
+
+    generateBasicReport(item) {
+        return {
+            title: `Secret Exposure: ${item.detector || 'Unknown'} in ${this.extractRepoName(item.repo_url)}`,
+            summary: `A ${item.detector || 'secret'} was discovered in the repository. This could potentially allow unauthorized access.`,
+            poc: `Repository: ${item.repo_url}\nFile: ${item.file_path}\nCommit: ${item.commit}\nDetector: ${item.detector}\nVerified: ${item.verified ? 'Yes' : 'No'}`,
+            impact: `This exposure could lead to unauthorized access to systems and data. Immediate remediation is recommended.`,
+            severity: item.verified ? 'High' : 'Medium'
+        };
+    }
+
+    displayReport(report) {
+        document.getElementById('reportTitle').value = report.title;
+        document.getElementById('reportSummary').value = report.summary;
+        document.getElementById('reportPOC').value = report.poc;
+        document.getElementById('reportImpact').value = report.impact;
         
-        if (elements.modal) elements.modal.style.display = 'block';
+        const severityBadge = document.getElementById('severityBadge');
+        severityBadge.textContent = report.severity;
+        severityBadge.className = `severity-badge severity-${report.severity.toLowerCase()}`;
         
+        document.getElementById('reportModal').style.display = 'block';
         this.currentReport = report;
     }
 
@@ -731,27 +1031,33 @@ class JSONViewer {
         const element = document.getElementById(elementId);
         if (!element) return;
         
-        const tempTextarea = document.createElement('textarea');
-        tempTextarea.value = element.value;
-        document.body.appendChild(tempTextarea);
-        tempTextarea.select();
-        
-        try {
-            document.execCommand('copy');
-            
+        navigator.clipboard.writeText(element.value).then(() => {
             const originalText = button.textContent;
-            button.textContent = 'Copied!';
+            button.textContent = '✅ Copied!';
             button.classList.add('copy-success');
             
             setTimeout(() => {
                 button.textContent = originalText;
                 button.classList.remove('copy-success');
             }, 2000);
-        } catch (err) {
-            console.error('Failed to copy text: ', err);
-        }
-        
-        document.body.removeChild(tempTextarea);
+        }).catch(() => {
+            // Fallback for older browsers
+            const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = element.value;
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextarea);
+            
+            const originalText = button.textContent;
+            button.textContent = '✅ Copied!';
+            button.classList.add('copy-success');
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('copy-success');
+            }, 2000);
+        });
     }
 
     copyAllReport() {
@@ -759,31 +1065,11 @@ class JSONViewer {
         
         const fullReport = `${this.currentReport.title}\n\n## Summary\n${this.currentReport.summary}\n\n## Proof of Concept\n${this.currentReport.poc}\n\n## Impact\n${this.currentReport.impact}`;
         
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(fullReport).then(() => {
-                this.showCopyFeedback('copyAllReport');
-            }).catch(() => {
-                this.fallbackCopyText(fullReport, 'copyAllReport');
-            });
-        } else {
+        navigator.clipboard.writeText(fullReport).then(() => {
+            this.showCopyFeedback('copyAllReport');
+        }).catch(() => {
             this.fallbackCopyText(fullReport, 'copyAllReport');
-        }
-    }
-
-    fallbackCopyText(text, buttonId) {
-        const tempTextarea = document.createElement('textarea');
-        tempTextarea.value = text;
-        document.body.appendChild(tempTextarea);
-        tempTextarea.select();
-        
-        try {
-            document.execCommand('copy');
-            this.showCopyFeedback(buttonId);
-        } catch (err) {
-            console.error('Failed to copy text: ', err);
-        }
-        
-        document.body.removeChild(tempTextarea);
+        });
     }
 
     showCopyFeedback(buttonId) {
@@ -821,12 +1107,10 @@ class JSONViewer {
 
 // Global function for report generation
 function generateReport(id) {
-    if (window.jsonViewer) {
-        window.jsonViewer.showReport(id);
-    }
+    window.jsonViewer?.showReport(id);
 }
 
-// Robust initialization
+// Initialize app
 function initializeApp() {
     console.log('🚀 Initializing JSON Viewer App...');
     
@@ -843,11 +1127,9 @@ function initializeApp() {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
-    // DOM is already ready
     setTimeout(initializeApp, 100);
 }
 
-// Backup initialization
 window.addEventListener('load', () => {
     if (!window.jsonViewer) {
         console.log('🔄 Backup initialization...');
