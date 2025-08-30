@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Enhanced Sidebar -->
+        <!-- Fixed Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>🔐 SecScan Pro</h2>
@@ -17,7 +17,7 @@
             <div class="upload-section">
                 <h3>📁 Upload Scan Results</h3>
                 <div class="upload-area" id="uploadArea">
-                    <input type="file" id="fileInput" accept=".json" hidden>
+                    <input type="file" id="fileInput" accept=".json" style="display: none;">
                     <div class="upload-content">
                         <div class="upload-icon">📤</div>
                         <p><strong>Drop JSON file or click to browse</strong></p>
@@ -54,7 +54,7 @@
             </div>
         </aside>
 
-        <!-- Enhanced Main Content -->
+        <!-- Fixed Main Content -->
         <main class="main-content">
             <header class="app-header">
                 <div class="header-left">
@@ -112,62 +112,6 @@
                 </div>
             </div>
         </main>
-    </div>
-
-    <!-- Enhanced Bug Bounty Report Modal -->
-    <div id="reportModal" class="modal" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <header class="modal-header">
-                <h2 id="modalTitle">🐛 Bug Bounty Report Generator</h2>
-                <button class="modal-close" id="closeModal" aria-label="Close modal">×</button>
-            </header>
-            
-            <div class="modal-body">
-                <div class="modal-controls">
-                    <button id="copyAllReport" class="btn btn-primary">📋 Copy All</button>
-                    <button id="downloadReport" class="btn btn-secondary">💾 Download</button>
-                    <div class="severity-indicator">
-                        <span class="severity-label">Severity:</span>
-                        <span class="severity-badge" id="severityBadge">Medium</span>
-                    </div>
-                </div>
-                
-                <div class="report-sections">
-                    <div class="report-section">
-                        <div class="section-header">
-                            <label>📝 Report Title</label>
-                            <button class="copy-section-btn" data-target="reportTitle">Copy</button>
-                        </div>
-                        <textarea id="reportTitle" rows="2" readonly></textarea>
-                    </div>
-                    
-                    <div class="report-section">
-                        <div class="section-header">
-                            <label>📋 Executive Summary</label>
-                            <button class="copy-section-btn" data-target="reportSummary">Copy</button>
-                        </div>
-                        <textarea id="reportSummary" rows="4" readonly></textarea>
-                    </div>
-                    
-                    <div class="report-section">
-                        <div class="section-header">
-                            <label>🔬 Proof of Concept</label>
-                            <button class="copy-section-btn" data-target="reportPOC">Copy</button>
-                        </div>
-                        <textarea id="reportPOC" rows="8" readonly></textarea>
-                    </div>
-                    
-                    <div class="report-section">
-                        <div class="section-header">
-                            <label>💥 Impact Assessment</label>
-                            <button class="copy-section-btn" data-target="reportImpact">Copy</button>
-                        </div>
-                        <textarea id="reportImpact" rows="6" readonly></textarea>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script src="detector-intelligence.js"></script>
