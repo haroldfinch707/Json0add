@@ -124,6 +124,7 @@ class JSONViewer {
     initEventListeners() {
         console.log('🎯 Initializing event listeners');
         
+        // Get elements
         const fileInput = document.getElementById('fileInput');
         const uploadArea = document.getElementById('uploadArea');
         const globalSearch = document.getElementById('globalSearch');
@@ -136,34 +137,53 @@ class JSONViewer {
         const prevPage = document.getElementById('prevPage');
         const nextPage = document.getElementById('nextPage');
 
-        // File upload handlers
-        uploadArea?.addEventListener('click', () => fileInput.click());
-        fileInput?.addEventListener('change', (e) => this.handleFileUpload(e));
+        // File upload handlers - FIXED
+        if (uploadArea && fileInput) {
+            uploadArea.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('📁 Upload area clicked');
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                console.log('📁 File input changed', e.target.files);
+                this.handleFileUpload(e);
+            });
 
-        // Enhanced drag and drop
-        uploadArea?.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
+            // Enhanced drag and drop - FIXED
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.add('dragover');
+            });
 
-        uploadArea?.addEventListener('dragleave', (e) => {
-            if (!uploadArea.contains(e.relatedTarget)) {
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!uploadArea.contains(e.relatedTarget)) {
+                    uploadArea.classList.remove('dragover');
+                }
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 uploadArea.classList.remove('dragover');
-            }
-        });
-
-        uploadArea?.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = Array.from(e.dataTransfer.files).filter(file => 
-                file.name.toLowerCase().endsWith('.json')
-            );
-            if (files.length > 0) {
-                this.processMultipleFiles(files);
-            } else {
-                this.showPopup('Please drop only JSON files', 'error');
-            }
-        });
+                console.log('📁 Files dropped', e.dataTransfer.files);
+                
+                const files = Array.from(e.dataTransfer.files).filter(file => 
+                    file.name.toLowerCase().endsWith('.json')
+                );
+                
+                if (files.length > 0) {
+                    this.processMultipleFiles(files);
+                } else {
+                    this.showPopup('Please drop only JSON files', 'error');
+                }
+            });
+        } else {
+            console.error('❌ Upload elements not found!');
+        }
 
         // Enhanced search functionality
         let searchTimeout;
@@ -175,7 +195,7 @@ class JSONViewer {
         });
 
         clearSearch?.addEventListener('click', () => {
-            globalSearch.value = '';
+            if (globalSearch) globalSearch.value = '';
             this.handleGlobalSearch('');
         });
 
@@ -272,34 +292,53 @@ class JSONViewer {
     }
 
     handleFileUpload(event) {
-        const files = Array.from(event.target.files).filter(file => 
+        console.log('📁 Handle file upload called', event.target.files);
+        
+        const files = Array.from(event.target.files);
+        console.log('📁 Files array:', files);
+        
+        const jsonFiles = files.filter(file => 
             file.name.toLowerCase().endsWith('.json')
         );
         
-        if (files.length === 0) {
+        console.log('📁 JSON files:', jsonFiles);
+        
+        if (jsonFiles.length === 0) {
             this.showPopup('Please select JSON files only', 'error');
             return;
         }
 
-        this.processMultipleFiles(files);
+        this.processMultipleFiles(jsonFiles);
+        
+        // Clear the input so the same file can be selected again
+        event.target.value = '';
     }
 
     async processMultipleFiles(files) {
+        console.log('📁 Processing', files.length, 'files');
+        
         try {
             let allData = [];
             let processedCount = 0;
+            let errorFiles = [];
 
             for (const file of files) {
                 try {
+                    console.log('📁 Processing file:', file.name);
                     const data = await this.readFile(file);
                     const jsonData = JSON.parse(data);
                     const dataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
                     allData.push(...dataArray);
                     processedCount++;
+                    console.log('✅ Successfully processed:', file.name);
                 } catch (error) {
-                    console.error(`Error processing ${file.name}:`, error);
-                    this.showPopup(`Error in ${file.name}: ${error.message}`, 'error');
+                    console.error(`❌ Error processing ${file.name}:`, error);
+                    errorFiles.push(file.name);
                 }
+            }
+
+            if (errorFiles.length > 0) {
+                this.showPopup(`Errors in files: ${errorFiles.join(', ')}`, 'warning');
             }
 
             if (allData.length === 0) {
@@ -307,7 +346,7 @@ class JSONViewer {
                 return;
             }
 
-            console.log('📁 Processing', allData.length, 'items from', processedCount, 'files');
+            console.log('📊 Total items loaded:', allData.length);
 
             if (this.data.length > 0) {
                 this.showAppendConfirmPopup(
@@ -332,9 +371,25 @@ class JSONViewer {
 
     readFile(file) {
         return new Promise((resolve, reject) => {
+            console.log('📖 Reading file:', file.name);
+            
+            if (!file) {
+                reject(new Error('No file provided'));
+                return;
+            }
+            
             const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = () => reject(new Error('Failed to read file'));
+            
+            reader.onload = (e) => {
+                console.log('✅ File read successfully:', file.name);
+                resolve(e.target.result);
+            };
+            
+            reader.onerror = () => {
+                console.error('❌ Failed to read file:', file.name);
+                reject(new Error(`Failed to read file: ${file.name}`));
+            };
+            
             reader.readAsText(file);
         });
     }
