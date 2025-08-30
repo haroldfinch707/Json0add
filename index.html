@@ -3,118 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecScan Pro - Security Scanner Results</title>
+    <title>JSON Secret Scanner Viewer</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Fixed Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2>🔐 SecScan Pro</h2>
-            </div>
-            
+    <div class="container">
+        <!-- Left Sidebar -->
+        <div class="sidebar">
             <div class="upload-section">
-                <h3>📁 Upload Scan Results</h3>
+                <h2>📁 Upload JSON File</h2>
                 <div class="upload-area" id="uploadArea">
                     <input type="file" id="fileInput" accept=".json" style="display: none;">
                     <div class="upload-content">
                         <div class="upload-icon">📤</div>
-                        <p><strong>Drop JSON file or click to browse</strong></p>
-                        <p class="upload-hint">Supports TruffleHog, GitLeaks, and similar tools</p>
+                        <p><strong>Click to upload or drag & drop JSON file</strong></p>
+                        <p id="uploadHint" class="upload-hint" style="display: none;">
+                            <small>💡 New files can be added to existing data</small>
+                        </p>
                     </div>
                 </div>
             </div>
 
             <div class="summary-section" id="summarySection" style="display: none;">
                 <h3>📊 Summary</h3>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-number" id="totalSecrets">0</div>
-                        <div class="stat-label">Total Secrets</div>
+                <div class="summary-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Secrets:</span>
+                        <span class="stat-value" id="totalSecrets">0</span>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="verifiedSecrets">0</div>
-                        <div class="stat-label">Verified</div>
+                    <div class="stat-item">
+                        <span class="stat-label">Repositories:</span>
+                        <span class="stat-value" id="totalRepos">0</span>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="totalRepos">0</div>
-                        <div class="stat-label">Repositories</div>
+                    <div class="stat-item">
+                        <span class="stat-label">Verified:</span>
+                        <span class="stat-value" id="verifiedSecrets">0</span>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="reviewedCount">0</div>
-                        <div class="stat-label">Reviewed</div>
+                    <div class="stat-item">
+                        <span class="stat-label">Reviewed:</span>
+                        <span class="stat-value" id="reviewedCount">0</span>
                     </div>
                 </div>
 
                 <div class="detector-breakdown">
-                    <h4>🔍 Detection Types</h4>
-                    <div id="detectorList" class="detector-list"></div>
+                    <h4>🔍 Detectors</h4>
+                    <div id="detectorList"></div>
                 </div>
             </div>
-        </aside>
+        </div>
 
-        <!-- Fixed Main Content -->
-        <main class="main-content">
-            <header class="app-header">
-                <div class="header-left">
-                    <h1>Security Scan Results</h1>
-                    <div class="results-count" id="resultsCount">No data loaded</div>
-                </div>
-                <div class="header-controls">
-                    <div class="search-container">
-                        <input type="text" id="globalSearch" placeholder="Search across all fields..." class="search-input">
-                        <button class="search-clear" id="clearSearch" title="Clear search">×</button>
-                    </div>
-                    <div class="control-buttons">
-                        <button id="clearReviewed" class="btn btn-ghost">Clear Reviews</button>
-                        <button id="exportData" class="btn btn-primary">Export Results</button>
-                    </div>
-                </div>
-            </header>
-
-            <div class="filters-bar" id="filtersBar" style="display: none;">
-                <div class="filter-group">
-                    <label>Sort by:</label>
-                    <select id="sortSelect" class="sort-select">
-                        <option value="default">Default Order</option>
-                        <option value="detector">Detector Type</option>
-                        <option value="verified">Verification Status</option>
-                        <option value="repo">Repository</option>
-                        <option value="severity">Severity (High to Low)</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Filter by:</label>
-                    <select id="filterSelect" class="filter-select">
-                        <option value="all">All Items</option>
-                        <option value="verified">Verified Only</option>
-                        <option value="unverified">Unverified Only</option>
-                        <option value="reviewed">Reviewed Only</option>
-                        <option value="unreviewed">Unreviewed Only</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Detector:</label>
-                    <select id="detectorFilter" class="detector-filter">
-                        <option value="all">All Detectors</option>
-                    </select>
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <h1>🔐 Security Scan Results</h1>
+                <div class="controls">
+                    <input type="text" id="globalSearch" placeholder="Global search..." class="search-input">
+                    <button id="clearReviewed" class="btn btn-secondary">Clear All Reviews</button>
+                    <button id="exportData" class="btn btn-primary">Export Data</button>
                 </div>
             </div>
 
-            <div class="content-area">
-                <div class="table-container" id="tableContainer">
-                    <div class="no-data-state" id="noDataState">
-                        <div class="no-data-icon">🔍</div>
-                        <h3>No Security Scan Results</h3>
-                        <p>Upload a JSON file from your security scanner to analyze the findings</p>
-                    </div>
+            <div class="table-container" id="tableContainer">
+                <div class="no-data" id="noData">
+                    <h3>No data loaded</h3>
+                    <p>Please upload a JSON file to view the results</p>
                 </div>
             </div>
-        </main>
+        </div>
     </div>
 
-    <script src="detector-intelligence.js"></script>
+    <!-- Bug Bounty Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🐛 Bug Bounty Report Generator</h2>
+                <span class="close" id="closeModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-controls">
+                    <button id="copyAllReport" class="btn btn-primary">📋 Copy All</button>
+                    <button id="downloadReport" class="btn btn-secondary">💾 Download</button>
+                    <span class="severity-badge" id="severityBadge">Medium</span>
+                </div>
+                
+                <div class="report-section">
+                    <label>📝 Title:</label>
+                    <textarea id="reportTitle" rows="2" readonly></textarea>
+                    <button class="copy-btn" data-target="reportTitle">Copy</button>
+                </div>
+                
+                <div class="report-section">
+                    <label>📋 Summary:</label>
+                    <textarea id="reportSummary" rows="4" readonly></textarea>
+                    <button class="copy-btn" data-target="reportSummary">Copy</button>
+                </div>
+                
+                <div class="report-section">
+                    <label>🔬 Proof of Concept:</label>
+                    <textarea id="reportPOC" rows="8" readonly></textarea>
+                    <button class="copy-btn" data-target="reportPOC">Copy</button>
+                </div>
+                
+                <div class="report-section">
+                    <label>💥 Impact:</label>
+                    <textarea id="reportImpact" rows="6" readonly></textarea>
+                    <button class="copy-btn" data-target="reportImpact">Copy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
