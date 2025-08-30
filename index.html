@@ -4,715 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JSON Secret Scanner Viewer</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0d1117;
-            color: #e6edf3;
-            line-height: 1.6;
-        }
-
-        .container {
-            display: flex;
-            height: 100vh;
-        }
-
-        /* Enhanced Sidebar */
-        .sidebar {
-            width: 320px;
-            background: #161b22;
-            border-right: 1px solid #30363d;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .upload-section h2 {
-            margin-bottom: 15px;
-            color: #58a6ff;
-        }
-
-        .upload-area {
-            border: 2px dashed #30363d;
-            border-radius: 8px;
-            padding: 30px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .upload-area:hover {
-            border-color: #58a6ff;
-            background: rgba(88, 166, 255, 0.05);
-        }
-
-        .upload-area.dragover {
-            border-color: #58a6ff;
-            background: rgba(88, 166, 255, 0.1);
-        }
-
-        .upload-icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
-        }
-
-        .summary-section {
-            margin-top: 30px;
-        }
-
-        .summary-section h3 {
-            margin-bottom: 15px;
-            color: #58a6ff;
-        }
-
-        .summary-stats {
-            background: #0d1117;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-
-        .stat-label {
-            color: #7d8590;
-        }
-
-        .stat-value {
-            color: #58a6ff;
-            font-weight: 600;
-        }
-
-        .detector-breakdown {
-            background: #0d1117;
-            border-radius: 6px;
-            padding: 15px;
-        }
-
-        .detector-breakdown h4 {
-            margin-bottom: 10px;
-            color: #58a6ff;
-        }
-
-        .detector-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            font-size: 0.9rem;
-            cursor: pointer;
-            border-radius: 4px;
-            padding: 5px 8px;
-        }
-
-        .detector-item:hover {
-            background: rgba(88, 166, 255, 0.1);
-        }
-
-        .detector-item.filtered {
-            background: rgba(88, 166, 255, 0.2);
-        }
-
-        /* Enhanced Filter Section */
-        .filter-section {
-            background: #0d1117;
-            border-radius: 6px;
-            padding: 15px;
-            margin-top: 20px;
-        }
-
-        .filter-section h4 {
-            margin-bottom: 10px;
-            color: #58a6ff;
-        }
-
-        .filter-toggle {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .filter-btn {
-            padding: 6px 12px;
-            background: #21262d;
-            border: 1px solid #30363d;
-            color: #e6edf3;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: all 0.2s ease;
-        }
-
-        .filter-btn:hover {
-            background: #30363d;
-        }
-
-        .filter-btn.active {
-            background: #58a6ff;
-            color: #0d1117;
-            border-color: #58a6ff;
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .header {
-            background: #161b22;
-            padding: 20px;
-            border-bottom: 1px solid #30363d;
-        }
-
-        .header h1 {
-            color: #58a6ff;
-            font-size: 1.5rem;
-            margin-bottom: 15px;
-        }
-
-        /* Enhanced Search Bar */
-        .search-container {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-
-        .search-input-container {
-            position: relative;
-            flex: 1;
-            min-width: 300px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 12px 45px 12px 15px;
-            background: #0d1117;
-            border: 2px solid #30363d;
-            border-radius: 8px;
-            color: #e6edf3;
-            font-size: 1rem;
-            transition: all 0.2s ease;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #58a6ff;
-            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
-        }
-
-        .search-clear {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #7d8590;
-            cursor: pointer;
-            font-size: 18px;
-            padding: 2px;
-            border-radius: 3px;
-            transition: all 0.2s ease;
-        }
-
-        .search-clear:hover {
-            color: #e6edf3;
-            background: #30363d;
-        }
-
-        /* Enhanced Controls */
-        .controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-primary {
-            background: #238636;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #2ea043;
-            transform: translateY(-1px);
-        }
-
-        .btn-secondary {
-            background: #21262d;
-            color: #e6edf3;
-            border: 1px solid #30363d;
-        }
-
-        .btn-secondary:hover {
-            background: #30363d;
-            transform: translateY(-1px);
-        }
-
-        .btn-danger {
-            background: #da3633;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #c5282f;
-            transform: translateY(-1px);
-        }
-
-        /* Enhanced Sort Controls */
-        .sort-container {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-left: auto;
-        }
-
-        .sort-select {
-            padding: 8px 12px;
-            background: #0d1117;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            color: #e6edf3;
-            cursor: pointer;
-        }
-
-        .sort-select:focus {
-            outline: none;
-            border-color: #58a6ff;
-        }
-
-        .sort-order {
-            background: #21262d;
-            border: 1px solid #30363d;
-            color: #e6edf3;
-            padding: 8px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .sort-order:hover {
-            background: #30363d;
-        }
-
-        /* Enhanced Table */
-        .table-container {
-            flex: 1;
-            overflow: auto;
-            padding: 20px;
-            position: relative;
-        }
-
-        .table-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            font-size: 0.9rem;
-            color: #7d8590;
-        }
-
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #0d1117;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .data-table th,
-        .data-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #30363d;
-        }
-
-        .data-table th {
-            background: #161b22;
-            color: #58a6ff;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            cursor: pointer;
-            user-select: none;
-            transition: all 0.2s ease;
-        }
-
-        .data-table th:hover {
-            background: #21262d;
-        }
-
-        .data-table th.sorted {
-            background: rgba(88, 166, 255, 0.1);
-        }
-
-        .data-table th::after {
-            content: '';
-            margin-left: 8px;
-            opacity: 0.3;
-        }
-
-        .data-table th.sort-asc::after {
-            content: '↑';
-            opacity: 1;
-        }
-
-        .data-table th.sort-desc::after {
-            content: '↓';
-            opacity: 1;
-        }
-
-        .data-table tr:hover {
-            background: rgba(88, 166, 255, 0.05);
-        }
-
-        .data-table td {
-            max-width: 200px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .repo-link {
-            color: #58a6ff;
-            text-decoration: none;
-        }
-
-        .repo-link:hover {
-            text-decoration: underline;
-        }
-
-        .detector-badge {
-            background: #58a6ff;
-            color: #0d1117;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-
-        .verified-badge {
-            background: #238636;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-        }
-
-        .unverified-badge {
-            background: #da3633;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-        }
-
-        .review-checkbox {
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            border: 2px solid #30363d;
-            border-radius: 3px;
-            background: #0d1117;
-            cursor: pointer;
-            position: relative;
-            transition: all 0.2s ease;
-        }
-
-        .review-checkbox:checked {
-            background: #238636;
-            border-color: #238636;
-        }
-
-        .review-checkbox:checked::after {
-            content: '✓';
-            position: absolute;
-            top: -2px;
-            left: 2px;
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .review-checkbox:hover {
-            border-color: #58a6ff;
-        }
-
-        .reviewed-row {
-            opacity: 0.6;
-            background: rgba(40, 167, 69, 0.1);
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 5px;
-        }
-
-        .btn-sm {
-            padding: 6px 10px;
-            font-size: 0.8rem;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-report {
-            background: #da3633;
-            color: white;
-        }
-
-        .btn-report:hover {
-            background: #c5282f;
-            transform: translateY(-1px);
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 100px 20px;
-            color: #7d8590;
-        }
-
-        /* Enhanced Popup Styles */
-        .custom-popup {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #161b22 0%, #21262d 100%);
-            color: #e6edf3;
-            padding: 16px 20px;
-            border-radius: 8px;
-            border: 1px solid #30363d;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            z-index: 2000;
-            min-width: 300px;
-            max-width: 400px;
-            transform: translateX(450px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .custom-popup.show {
-            transform: translateX(0);
-        }
-
-        .custom-popup.success {
-            border-left: 4px solid #238636;
-        }
-
-        .custom-popup.error {
-            border-left: 4px solid #da3633;
-        }
-
-        .custom-popup.warning {
-            border-left: 4px solid #fb8500;
-        }
-
-        .custom-popup.info {
-            border-left: 4px solid #58a6ff;
-        }
-
-        .popup-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .popup-title {
-            font-weight: 600;
-            color: #58a6ff;
-        }
-
-        .popup-close {
-            background: none;
-            border: none;
-            color: #7d8590;
-            cursor: pointer;
-            font-size: 18px;
-            padding: 0;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .popup-close:hover {
-            color: #e6edf3;
-        }
-
-        .popup-message {
-            color: #e6edf3;
-            line-height: 1.4;
-        }
-
-        .popup-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 12px;
-            justify-content: flex-end;
-        }
-
-        .popup-btn {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-        }
-
-        .popup-btn.primary {
-            background: #238636;
-            color: white;
-        }
-
-        .popup-btn.primary:hover {
-            background: #2ea043;
-        }
-
-        .popup-btn.secondary {
-            background: #21262d;
-            color: #e6edf3;
-            border: 1px solid #30363d;
-        }
-
-        .popup-btn.secondary:hover {
-            background: #30363d;
-        }
-
-        .popup-btn.danger {
-            background: #da3633;
-            color: white;
-        }
-
-        .popup-btn.danger:hover {
-            background: #c5282f;
-        }
-
-        /* Scrollbar Styles */
-        .table-container::-webkit-scrollbar,
-        .sidebar::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .table-container::-webkit-scrollbar-track,
-        .sidebar::-webkit-scrollbar-track {
-            background: #0d1117;
-        }
-
-        .table-container::-webkit-scrollbar-thumb,
-        .sidebar::-webkit-scrollbar-thumb {
-            background: #30363d;
-            border-radius: 4px;
-        }
-
-        .table-container::-webkit-scrollbar-thumb:hover,
-        .sidebar::-webkit-scrollbar-thumb:hover {
-            background: #58a6ff;
-        }
-
-        /* Loading Animation */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #30363d;
-            border-radius: 50%;
-            border-top-color: #58a6ff;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1200px) {
-            .sidebar {
-                width: 300px;
-            }
-        }
-
-        @media (max-width: 992px) {
-            .sidebar {
-                width: 280px;
-            }
-            
-            .search-input-container {
-                min-width: 250px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-            
-            .sidebar {
-                width: 100%;
-                height: auto;
-                max-height: 40vh;
-                border-right: none;
-                border-bottom: 1px solid #30363d;
-            }
-            
-            .search-container {
-                flex-direction: column;
-            }
-            
-            .search-input-container {
-                min-width: auto;
-            }
-            
-            .controls {
-                justify-content: space-between;
-                flex-wrap: wrap;
-            }
-            
-            .sort-container {
-                margin-left: 0;
-                margin-top: 10px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <!-- Enhanced Sidebar -->
+        <!-- Left Sidebar -->
         <div class="sidebar">
             <div class="upload-section">
                 <h2>📁 Upload JSON File</h2>
                 <div class="upload-area" id="uploadArea">
-                    <input type="file" id="fileInput" accept=".json" hidden>
+                    <input type="file" id="fileInput" accept=".json" multiple hidden>
                     <div class="upload-content">
                         <div class="upload-icon">📤</div>
-                        <p><strong>Click to upload or drag & drop JSON file</strong></p>
+                        <p><strong>Click to upload or drag & drop JSON files</strong></p>
                         <p id="uploadHint" class="upload-hint" style="display: none;">
-                            <small>💡 New files can be added to existing data</small>
+                            <small>💡 Multiple files can be processed together</small>
                         </p>
                     </div>
                 </div>
@@ -744,46 +50,48 @@
                     <div id="detectorList"></div>
                 </div>
 
-                <div class="filter-section">
+                <div class="filter-shortcuts">
                     <h4>⚡ Quick Filters</h4>
-                    <div class="filter-toggle">
-                        <button class="filter-btn" data-filter="verified">Verified</button>
-                        <button class="filter-btn" data-filter="unverified">Unverified</button>
-                    </div>
-                    <div class="filter-toggle">
-                        <button class="filter-btn" data-filter="reviewed">Reviewed</button>
-                        <button class="filter-btn" data-filter="unreviewed">Unreviewed</button>
+                    <div class="quick-filters">
+                        <button class="filter-btn" data-filter="verified">✅ Verified Only</button>
+                        <button class="filter-btn" data-filter="unverified">❌ Unverified Only</button>
+                        <button class="filter-btn" data-filter="reviewed">📝 Reviewed Only</button>
+                        <button class="filter-btn" data-filter="unreviewed">📋 Unreviewed Only</button>
+                        <button class="filter-btn" data-filter="all">🔄 Show All</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Enhanced Main Content -->
+        <!-- Main Content -->
         <div class="main-content">
             <div class="header">
                 <h1>🔐 Security Scan Results</h1>
-                
-                <div class="search-container">
-                    <div class="search-input-container">
-                        <input type="text" id="globalSearch" placeholder="Search across all fields (repo, author, commit, filename, secret, detector)..." class="search-input">
-                        <button id="searchClear" class="search-clear" style="display: none;">×</button>
-                    </div>
-                </div>
-
                 <div class="controls">
-                    <button id="clearReviewed" class="btn btn-danger">🗑️ Clear All Data</button>
-                    <button id="exportData" class="btn btn-primary">📤 Export Data</button>
-                    
-                    <div class="sort-container">
-                        <select id="sortSelect" class="sort-select">
-                            <option value="default">Default Order</option>
-                            <option value="detector">Sort by Detector</option>
-                            <option value="verified">Sort by Verified</option>
-                            <option value="repo">Sort by Repository</option>
-                            <option value="author">Sort by Author</option>
-                            <option value="reviewed">Sort by Review Status</option>
+                    <div class="search-container">
+                        <div class="search-box">
+                            <input type="text" id="globalSearch" placeholder="Search across all fields..." class="search-input">
+                            <button id="clearSearch" class="clear-search">×</button>
+                        </div>
+                        <div class="search-options">
+                            <label class="search-option">
+                                <input type="checkbox" id="caseSensitive"> Case Sensitive
+                            </label>
+                            <label class="search-option">
+                                <input type="checkbox" id="regexSearch"> Regex
+                            </label>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="clearReviewed" class="btn btn-secondary">🧹 Clear All</button>
+                        <button id="exportData" class="btn btn-primary">💾 Export</button>
+                        <select id="itemsPerPage" class="items-select">
+                            <option value="50">50 per page</option>
+                            <option value="100" selected>100 per page</option>
+                            <option value="250">250 per page</option>
+                            <option value="500">500 per page</option>
+                            <option value="all">Show All</option>
                         </select>
-                        <button id="sortOrder" class="sort-order" title="Toggle sort order">↑</button>
                     </div>
                 </div>
             </div>
@@ -794,218 +102,57 @@
                     <p>Please upload a JSON file to view the results</p>
                 </div>
             </div>
+
+            <div class="pagination" id="pagination" style="display: none;">
+                <button id="prevPage" class="btn btn-secondary">← Previous</button>
+                <span id="pageInfo">Page 1 of 1</span>
+                <button id="nextPage" class="btn btn-secondary">Next →</button>
+            </div>
         </div>
     </div>
 
-    <script>
-        class EnhancedJSONViewer {
-            constructor() {
-                this.data = [];
-                this.filteredData = [];
-                this.reviewedItems = new Set();
-                this.currentSort = 'default';
-                this.sortAscending = true;
-                this.activeFilters = new Set();
+    <!-- Bug Bounty Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🐛 Bug Bounty Report Generator</h2>
+                <span class="close" id="closeModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-controls">
+                    <button id="copyAllReport" class="btn btn-primary">📋 Copy All</button>
+                    <button id="downloadReport" class="btn btn-secondary">💾 Download</button>
+                    <span class="severity-badge" id="severityBadge">Medium</span>
+                </div>
                 
-                console.log('🚀 Enhanced JSONViewer constructor called');
+                <div class="report-section">
+                    <label>📝 Title:</label>
+                    <textarea id="reportTitle" rows="2" readonly></textarea>
+                    <button class="copy-btn" data-target="reportTitle">Copy</button>
+                </div>
                 
-                this.initEventListeners();
+                <div class="report-section">
+                    <label>📋 Summary:</label>
+                    <textarea id="reportSummary" rows="4" readonly></textarea>
+                    <button class="copy-btn" data-target="reportSummary">Copy</button>
+                </div>
                 
-                setTimeout(() => {
-                    this.loadReviewedItems();
-                    this.loadStoredData();
-                }, 200);
-            }
-
-            // Enhanced popup methods
-            showPopup(message, type = 'info', title = '', actions = null) {
-                const popup = document.createElement('div');
-                popup.className = `custom-popup ${type}`;
+                <div class="report-section">
+                    <label>🔬 Proof of Concept:</label>
+                    <textarea id="reportPOC" rows="8" readonly></textarea>
+                    <button class="copy-btn" data-target="reportPOC">Copy</button>
+                </div>
                 
-                const titleText = title || this.getDefaultTitle(type);
-                
-                popup.innerHTML = `
-                    <div class="popup-header">
-                        <div class="popup-title">${titleText}</div>
-                        <button class="popup-close">&times;</button>
-                    </div>
-                    <div class="popup-message">${message}</div>
-                    ${actions ? `<div class="popup-actions">${actions}</div>` : ''}
-                `;
-                
-                document.body.appendChild(popup);
-                
-                setTimeout(() => popup.classList.add('show'), 10);
-                
-                if (!actions) {
-                    setTimeout(() => this.hidePopup(popup), 5000);
-                }
-                
-                popup.querySelector('.popup-close').addEventListener('click', () => {
-                    this.hidePopup(popup);
-                });
-                
-                return popup;
-            }
+                <div class="report-section">
+                    <label>💥 Impact:</label>
+                    <textarea id="reportImpact" rows="6" readonly></textarea>
+                    <button class="copy-btn" data-target="reportImpact">Copy</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            showConfirmPopup(message, onConfirm, onCancel = null, type = 'warning') {
-                const actions = `
-                    <button class="popup-btn danger" data-action="confirm">Yes, Continue</button>
-                    <button class="popup-btn secondary" data-action="cancel">Cancel</button>
-                `;
-                
-                const popup = this.showPopup(message, type, 'Confirm Action', actions);
-                
-                popup.querySelector('[data-action="confirm"]').addEventListener('click', () => {
-                    this.hidePopup(popup);
-                    if (onConfirm) onConfirm();
-                });
-                
-                popup.querySelector('[data-action="cancel"]').addEventListener('click', () => {
-                    this.hidePopup(popup);
-                    if (onCancel) onCancel();
-                });
-            }
-
-            showAppendConfirmPopup(existingCount, newCount, onAppend, onReplace) {
-                const message = `You already have <strong>${existingCount}</strong> items loaded.<br><br>
-                    <strong>Choose your action:</strong><br>
-                    • <strong>Add to Top</strong> - Add the new ${newCount} items to the beginning<br>
-                    • <strong>Replace All</strong> - Replace existing data with new data`;
-                
-                const actions = `
-                    <button class="popup-btn primary" data-action="append">📎 Add to Top</button>
-                    <button class="popup-btn secondary" data-action="replace">🔄 Replace All</button>
-                    <button class="popup-btn secondary" data-action="cancel">❌ Cancel</button>
-                `;
-                
-                const popup = this.showPopup(message, 'info', 'File Upload Options', actions);
-                
-                popup.querySelector('[data-action="append"]').addEventListener('click', () => {
-                    this.hidePopup(popup);
-                    if (onAppend) onAppend();
-                });
-                
-                popup.querySelector('[data-action="replace"]').addEventListener('click', () => {
-                    this.hidePopup(popup);
-                    if (onReplace) onReplace();
-                });
-                
-                popup.querySelector('[data-action="cancel"]').addEventListener('click', () => {
-                    this.hidePopup(popup);
-                });
-            }
-
-            hidePopup(popup) {
-                popup.classList.remove('show');
-                setTimeout(() => {
-                    if (popup.parentNode) {
-                        popup.parentNode.removeChild(popup);
-                    }
-                }, 300);
-            }
-
-            getDefaultTitle(type) {
-                const titles = {
-                    success: '✅ Success',
-                    error: '❌ Error',
-                    warning: '⚠️ Warning',
-                    info: 'ℹ️ Information'
-                };
-                return titles[type] || 'Notification';
-            }
-
-            initEventListeners() {
-                console.log('🎯 Initializing event listeners');
-                
-                const fileInput = document.getElementById('fileInput');
-                const uploadArea = document.getElementById('uploadArea');
-                const globalSearch = document.getElementById('globalSearch');
-                const searchClear = document.getElementById('searchClear');
-                const clearReviewed = document.getElementById('clearReviewed');
-                const exportData = document.getElementById('exportData');
-                const sortSelect = document.getElementById('sortSelect');
-                const sortOrder = document.getElementById('sortOrder');
-
-                // File upload handlers
-                uploadArea?.addEventListener('click', () => fileInput.click());
-                fileInput?.addEventListener('change', (e) => this.handleFileUpload(e));
-
-                // Drag and drop
-                uploadArea?.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.add('dragover');
-                });
-
-                uploadArea?.addEventListener('dragleave', () => {
-                    uploadArea.classList.remove('dragover');
-                });
-
-                uploadArea?.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.remove('dragover');
-                    const files = e.dataTransfer.files;
-                    if (files.length > 0) {
-                        this.processFile(files[0]);
-                    }
-                });
-
-                // Enhanced search
-                globalSearch?.addEventListener('input', (e) => {
-                    const value = e.target.value;
-                    this.handleGlobalSearch(value);
-                    searchClear.style.display = value.trim() ? 'block' : 'none';
-                });
-
-                searchClear?.addEventListener('click', () => {
-                    globalSearch.value = '';
-                    searchClear.style.display = 'none';
-                    this.handleGlobalSearch('');
-                });
-
-                // Sort controls
-                sortSelect?.addEventListener('change', (e) => {
-                    this.currentSort = e.target.value;
-                    this.applySortAndFilter();
-                });
-
-                sortOrder?.addEventListener('click', () => {
-                    this.sortAscending = !this.sortAscending;
-                    sortOrder.textContent = this.sortAscending ? '↑' : '↓';
-                    sortOrder.title = this.sortAscending ? 'Sort Ascending' : 'Sort Descending';
-                    this.applySortAndFilter();
-                });
-
-                // Controls
-                clearReviewed?.addEventListener('click', () => this.clearAllData());
-                exportData?.addEventListener('click', () => this.exportData());
-
-                // Filter buttons
-                document.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('filter-btn')) {
-                        this.toggleFilter(e.target);
-                    }
-                    if (e.target.classList.contains('detector-item')) {
-                        this.filterByDetector(e.target.querySelector('span').textContent);
-                    }
-                });
-            }
-
-            handleFileUpload(event) {
-                const file = event.target.files[0];
-                if (file) {
-                    this.processFile(file);
-                }
-            }
-
-            processFile(file) {
-                if (!file.name.toLowerCase().endsWith('.json')) {
-                    this.showPopup('Please upload a JSON file', 'error');
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const jsonData = JSON.parse(e.target.result);
-                        const newDataArray = Array.isArray(jsonData) ? jsonData
+    <script src="detector-intelligence.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
