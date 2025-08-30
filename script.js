@@ -4,673 +4,705 @@ class JSONViewer {
         this.filteredData = [];
         this.reviewedItems = new Set();
         this.currentReport = null;
-        this.sortState = { column: null, direction: 'asc' };
-        this.filterState = { type: 'all', detector: 'all' };
         
-        console.log('🚀 JSONViewer initializing...');
-        this.initializeApp();
+        console.log('🚀 JSONViewer constructor called');
+        
+        // Initialize everything in the correct order
+        this.initEventListeners();
+        
+        // Load data after a short delay to ensure DOM is ready
+        setTimeout(() => {
+            this.loadReviewedItems();
+            this.loadStoredData();
+        }, 200);
     }
 
-    initializeApp() {
-        // Wait for DOM and detector-intelligence.js to be ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                setTimeout(() => this.setupApp(), 100);
-            });
-        } else {
-            setTimeout(() => this.setupApp(), 100);
+    // Custom popup methods
+    showPopup(message, type = 'info', title = '', actions = null) {
+        const popup = document.createElement('div');
+        popup.className = `custom-popup ${type}`;
+        
+        const titleText = title || this.getDefaultTitle(type);
+        
+        popup.innerHTML = `
+            <div class="popup-header">
+                <div class="popup-title">${titleText}</div>
+                <button class="popup-close">&times;</button>
+            </div>
+            <div class="popup-message">${message}</div>
+            ${actions ? `<div class="popup-actions">${actions}</div>` : ''}
+        `;
+        
+        document.body.appendChild(popup);
+        
+        // Show popup with animation
+        setTimeout(() => popup.classList.add('show'), 10);
+        
+        // Auto-hide after 5 seconds if no actions
+        if (!actions) {
+            setTimeout(() => this.hidePopup(popup), 5000);
         }
-    }
-
-    setupApp() {
-        console.log('🎯 Setting up app...');
-        this.setupEventListeners();
-        this.loadStoredData();
-        this.loadReviewedItems();
-        console.log('✅ App setup complete');
-    }
-
-    setupEventListeners() {
-        console.log('🎯 Setting up event listeners...');
         
-        // Upload area - CRITICAL FIX
-        const uploadArea = document.getElementById('uploadArea');
+        // Close button handler
+        popup.querySelector('.popup-close').addEventListener('click', () => {
+            this.hidePopup(popup);
+        });
+        
+        return popup;
+    }
+
+    showConfirmPopup(message, onConfirm, onCancel = null, type = 'warning') {
+        const actions = `
+            <button class="popup-btn danger" data-action="confirm">Yes, Continue</button>
+            <button class="popup-btn secondary" data-action="cancel">Cancel</button>
+        `;
+        
+        const popup = this.showPopup(message, type, 'Confirm Action', actions);
+        
+        popup.querySelector('[data-action="confirm"]').addEventListener('click', () => {
+            this.hidePopup(popup);
+            if (onConfirm) onConfirm();
+        });
+        
+        popup.querySelector('[data-action="cancel"]').addEventListener('click', () => {
+            this.hidePopup(popup);
+            if (onCancel) onCancel();
+        });
+    }
+
+    showAppendConfirmPopup(existingCount, newCount, onAppend, onReplace) {
+        const message = `You already have <strong>${existingCount}</strong> items loaded.<br><br>
+            <strong>Choose your action:</strong><br>
+            • <strong>Add to Top</strong> - Add the new ${newCount} items to the beginning<br>
+            • <strong>Replace All</strong> - Replace existing data with new data`;
+        
+        const actions = `
+            <button class="popup-btn primary" data-action="append">📎 Add to Top</button>
+            <button class="popup-btn secondary" data-action="replace">🔄 Replace All</button>
+            <button class="popup-btn secondary" data-action="cancel">❌ Cancel</button>
+        `;
+        
+        const popup = this.showPopup(message, 'info', 'File Upload Options', actions);
+        
+        popup.querySelector('[data-action="append"]').addEventListener('click', () => {
+            this.hidePopup(popup);
+            if (onAppend) onAppend();
+        });
+        
+        popup.querySelector('[data-action="replace"]').addEventListener('click', () => {
+            this.hidePopup(popup);
+            if (onReplace) onReplace();
+        });
+        
+        popup.querySelector('[data-action="cancel"]').addEventListener('click', () => {
+            this.hidePopup(popup);
+        });
+    }
+
+    hidePopup(popup) {
+        popup.classList.remove('show');
+        setTimeout(() => {
+            if (popup.parentNode) {
+                popup.parentNode.removeChild(popup);
+            }
+        }, 300);
+    }
+
+    getDefaultTitle(type) {
+        const titles = {
+            success: '✅ Success',
+            error: '❌ Error',
+            warning: '⚠️ Warning',
+            info: 'ℹ️ Information'
+        };
+        return titles[type] || 'Notification';
+    }
+
+    initEventListeners() {
+        console.log('🎯 Initializing event listeners');
+        
         const fileInput = document.getElementById('fileInput');
-        
-        if (uploadArea && fileInput) {
-            // Multiple event bindings to ensure it works
-            uploadArea.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('🖱️ Upload area clicked');
-                fileInput.click();
-            };
-            
-            uploadArea.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('🖱️ Upload area click event');
-                fileInput.click();
-            });
-            
-            // Keyboard support
-            uploadArea.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    fileInput.click();
-                }
-            });
-            
-            fileInput.addEventListener('change', (e) => {
-                console.log('📁 File selected');
-                this.handleFileUpload(e);
-            });
-            
-            // Drag and drop
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-            
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragover');
-            });
-            
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    console.log('📁 File dropped');
-                    this.processFile(files[0]);
-                }
-            });
-            
-            console.log('✅ Upload area events attached');
-        }
-        
-        // Search functionality
-        const searchInput = document.getElementById('globalSearch');
-        const clearSearch = document.getElementById('clearSearch');
-        
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                this.handleSearch(e.target.value);
-            });
-        }
-        
-        if (clearSearch) {
-            clearSearch.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('🔍 Clear search clicked');
-                searchInput.value = '';
-                this.handleSearch('');
-            });
-        }
-        
-        // Control buttons
-        const clearBtn = document.getElementById('clearReviewed');
-        const exportBtn = document.getElementById('exportData');
-        
-        if (clearBtn) {
-            clearBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('🧹 Clear reviews clicked');
-                this.clearAllData();
-            });
-        }
-        
-        if (exportBtn) {
-            exportBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('📤 Export clicked');
-                this.exportData();
-            });
-        }
-        
-        // Filter dropdowns
-        const sortSelect = document.getElementById('sortSelect');
-        const filterSelect = document.getElementById('filterSelect');
-        const detectorFilter = document.getElementById('detectorFilter');
-        
-        if (sortSelect) {
-            sortSelect.addEventListener('change', (e) => {
-                console.log('🔄 Sort changed:', e.target.value);
-                this.handleSort(e.target.value);
-            });
-        }
-        
-        if (filterSelect) {
-            filterSelect.addEventListener('change', (e) => {
-                console.log('🔍 Filter changed:', e.target.value);
-                this.handleFilter(e.target.value);
-            });
-        }
-        
-        if (detectorFilter) {
-            detectorFilter.addEventListener('change', (e) => {
-                console.log('🔍 Detector filter changed:', e.target.value);
-                this.handleDetectorFilter(e.target.value);
-            });
-        }
-        
-        // Modal events
-        this.setupModalEvents();
-        
-        console.log('✅ All event listeners attached');
-    }
+        const uploadArea = document.getElementById('uploadArea');
+        const globalSearch = document.getElementById('globalSearch');
+        const clearReviewed = document.getElementById('clearReviewed');
+        const exportData = document.getElementById('exportData');
 
-    setupModalEvents() {
-        const modal = document.getElementById('reportModal');
-        const closeBtn = document.getElementById('closeModal');
-        const copyAllBtn = document.getElementById('copyAllReport');
-        const downloadBtn = document.getElementById('downloadReport');
+        // File upload handlers
+        uploadArea?.addEventListener('click', () => fileInput.click());
+        fileInput?.addEventListener('change', (e) => this.handleFileUpload(e));
 
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.hideModal());
-        }
-        
-        if (copyAllBtn) {
-            copyAllBtn.addEventListener('click', () => this.copyAllReport());
-        }
-        
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', () => this.downloadReport());
-        }
+        // Drag and drop
+        uploadArea?.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
 
-        // Copy section buttons
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('copy-section-btn')) {
-                const targetId = e.target.dataset.target;
-                this.copySection(targetId, e.target);
+        uploadArea?.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea?.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                this.processFile(files[0]);
             }
         });
 
-        // Close modal on overlay click
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal || e.target.classList.contains('modal-overlay')) {
-                    this.hideModal();
-                }
-            });
-        }
+        // Search and controls
+        globalSearch?.addEventListener('input', (e) => this.handleGlobalSearch(e.target.value));
+        clearReviewed?.addEventListener('click', () => this.clearAllData());
+        exportData?.addEventListener('click', () => this.exportData());
+
+        // Modal event listeners
+        this.initModalEventListeners();
+    }
+
+    initModalEventListeners() {
+        const modal = document.getElementById('reportModal');
+        const closeModal = document.getElementById('closeModal');
+        const copyAllReport = document.getElementById('copyAllReport');
+        const downloadReport = document.getElementById('downloadReport');
+
+        closeModal?.addEventListener('click', () => {
+            if (modal) modal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        copyAllReport?.addEventListener('click', () => this.copyAllReport());
+        downloadReport?.addEventListener('click', () => this.downloadReport());
+
+        // Individual copy buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('copy-btn')) {
+                const targetId = e.target.dataset.target;
+                this.copyToClipboard(targetId, e.target);
+            }
+        });
     }
 
     handleFileUpload(event) {
         const file = event.target.files[0];
         if (file) {
-            console.log('📁 Processing file:', file.name);
             this.processFile(file);
         }
     }
 
-    async processFile(file) {
-        if (!this.validateFile(file)) return;
-
-        try {
-            console.log('📊 Reading file...');
-            const text = await this.readFileAsync(file);
-            const jsonData = JSON.parse(text);
-            const dataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
-            
-            console.log('📊 Loaded', dataArray.length, 'items from file');
-            
-            if (this.data.length > 0) {
-                this.showAppendDialog(dataArray);
-            } else {
-                this.loadData(dataArray);
-                this.showToast(`Loaded ${dataArray.length} security findings`, 'success');
-            }
-        } catch (error) {
-            console.error('❌ File processing error:', error);
-            this.showToast(`Failed to process file: ${error.message}`, 'error');
-        }
-    }
-
-    validateFile(file) {
+    processFile(file) {
         if (!file.name.toLowerCase().endsWith('.json')) {
-            this.showToast('Please select a JSON file', 'error');
-            return false;
+            this.showPopup('Please upload a JSON file', 'error');
+            return;
         }
-        
-        if (file.size > 10 * 1024 * 1024) {
-            this.showToast('File too large. Maximum size is 10MB', 'error');
-            return false;
-        }
-        
-        return true;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const jsonData = JSON.parse(e.target.result);
+                const newDataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
+                
+                console.log('📁 Processing new file with', newDataArray.length, 'items');
+                
+                // Check if we have existing data
+                if (this.data.length > 0) {
+                    // Show custom append confirmation popup
+                    this.showAppendConfirmPopup(
+                        this.data.length,
+                        newDataArray.length,
+                        () => this.appendDataToTop(newDataArray),
+                        () => {
+                            this.loadDataIntoApp(newDataArray);
+                            this.saveToLocalStorage(newDataArray);
+                        }
+                    );
+                } else {
+                    // No existing data, just load normally
+                    this.loadDataIntoApp(newDataArray);
+                    this.saveToLocalStorage(newDataArray);
+                }
+                
+            } catch (error) {
+                console.error('❌ JSON parsing error:', error);
+                this.showPopup(`Invalid JSON file: ${error.message}`, 'error');
+            }
+        };
+        reader.readAsText(file);
     }
 
-    readFileAsync(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = e => resolve(e.target.result);
-            reader.onerror = reject;
-            reader.readAsText(file);
+    // New method to append data to the top
+    appendDataToTop(newDataArray) {
+        console.log('📎 Appending', newDataArray.length, 'new items to the top');
+        
+        // Get current raw data without the processed fields
+        const existingRawData = this.getRawDataArray();
+        
+        // Combine new data at the top with existing data
+        const combinedRawData = [...newDataArray, ...existingRawData];
+        
+        // Reload with combined data
+        this.loadDataIntoApp(combinedRawData);
+        this.saveToLocalStorage(combinedRawData);
+        
+        console.log('✅ Data appended successfully. Total items:', this.data.length);
+        this.showPopup(
+            `Added <strong>${newDataArray.length}</strong> new items to the top!<br>Total items: <strong>${this.data.length}</strong>`,
+            'success'
+        );
+    }
+
+    // New helper method to get raw data array (without processed fields)
+    getRawDataArray() {
+        return this.data.map(item => {
+            // Remove processed fields and return original data
+            const { id, reviewed, ...rawItem } = item;
+            return rawItem;
         });
     }
 
-    showAppendDialog(newData) {
-        const result = confirm(
-            `You have ${this.data.length} existing items.\n\n` +
-            `Click OK to ADD ${newData.length} new items to the top.\n` +
-            `Click Cancel to REPLACE all existing data.`
-        );
-        
-        if (result) {
-            this.appendData(newData, true);
-        } else {
-            this.loadData(newData);
-        }
-    }
-
-    loadData(rawData) {
-        console.log('📊 Loading', rawData.length, 'items into app');
+    loadDataIntoApp(rawData) {
+        console.log('📊 Loading data into app:', rawData.length, 'items');
         
         this.data = rawData.map((item, index) => ({
             ...item,
-            id: `item_${Date.now()}_${index}`,
-            reviewed: this.reviewedItems.has(this.generateItemId(item)),
-            severity: this.calculateSeverity(item)
+            id: index,
+            reviewed: this.reviewedItems.has(this.generateItemId(item))
         }));
         
-        this.applyFiltersAndSort();
-        this.updateUI();
-        this.saveToStorage();
+        this.filteredData = [...this.data];
+        
+        // Update UI
+        this.updateSummary();
+        this.renderTable();
+        this.showDataUI();
         
         console.log('✅ Data loaded successfully');
     }
 
-    appendData(newData, prepend = true) {
-        const processedNewData = newData.map((item, index) => ({
-            ...item,
-            id: `item_${Date.now()}_${index}`,
-            reviewed: this.reviewedItems.has(this.generateItemId(item)),
-            severity: this.calculateSeverity(item)
-        }));
-        
-        this.data = prepend 
-            ? [...processedNewData, ...this.data]
-            : [...this.data, ...processedNewData];
-        
-        this.applyFiltersAndSort();
-        this.updateUI();
-        this.saveToStorage();
-        
-        this.showToast(`Added ${newData.length} new items${prepend ? ' to top' : ''}`, 'success');
-    }
-
-    calculateSeverity(item) {
-        if (item.verified) return 'critical';
-        
-        const detectorType = (item.detector || '').toLowerCase();
-        const highRiskDetectors = ['aws', 'slack', 'github', 'jwt', 'private-key'];
-        const mediumRiskDetectors = ['api-key', 'password', 'token'];
-        
-        if (highRiskDetectors.some(d => detectorType.includes(d))) return 'high';
-        if (mediumRiskDetectors.some(d => detectorType.includes(d))) return 'medium';
-        
-        return 'low';
-    }
-
-    // Search and filtering
-    handleSearch(query) {
-        console.log('🔍 Searching for:', query);
-        this.searchTerm = query.toLowerCase();
-        this.applyFiltersAndSort();
-        this.updateResultsCount();
-    }
-
-    handleSort(sortType) {
-        console.log('🔄 Sorting by:', sortType);
-        switch (sortType) {
-            case 'detector':
-                this.sortBy('detector');
-                break;
-            case 'verified':
-                this.sortBy('verified');
-                break;
-            case 'repo':
-                this.sortBy('repo_url');
-                break;
-            case 'severity':
-                this.sortBySeverity();
-                break;
-            default:
-                this.sortState = { column: null, direction: 'asc' };
-                this.applyFiltersAndSort();
-        }
-    }
-
-    handleFilter(filterType) {
-        console.log('🔍 Filtering by:', filterType);
-        this.filterState.type = filterType;
-        this.applyFiltersAndSort();
-    }
-
-    handleDetectorFilter(detector) {
-        console.log('🔍 Detector filter:', detector);
-        this.filterState.detector = detector;
-        this.applyFiltersAndSort();
-    }
-
-    sortBy(column) {
-        if (this.sortState.column === column) {
-            this.sortState.direction = this.sortState.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            this.sortState = { column, direction: 'asc' };
-        }
-        
-        this.applyFiltersAndSort();
-    }
-
-    sortBySeverity() {
-        const severityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
-        this.filteredData.sort((a, b) => severityOrder[b.severity] - severityOrder[a.severity]);
-        this.renderTable();
-    }
-
-    applyFiltersAndSort() {
-        let filtered = [...this.data];
-        
-        // Apply search
-        if (this.searchTerm) {
-            filtered = filtered.filter(item => 
-                this.searchInItem(item, this.searchTerm)
-            );
-        }
-        
-        // Apply type filter
-        if (this.filterState.type !== 'all') {
-            filtered = filtered.filter(item => {
-                switch (this.filterState.type) {
-                    case 'verified': return item.verified;
-                    case 'unverified': return !item.verified;
-                    case 'reviewed': return item.reviewed;
-                    case 'unreviewed': return !item.reviewed;
-                    default: return true;
+    saveToLocalStorage(rawDataArray) {
+        try {
+            const storageData = {
+                data: rawDataArray,
+                timestamp: new Date().toISOString(),
+                version: '1.0'
+            };
+            
+            localStorage.setItem('jsonViewerData', JSON.stringify(storageData));
+            console.log('💾 Data saved to localStorage');
+            
+        } catch (error) {
+            console.error('❌ Failed to save to localStorage:', error);
+            
+            if (error.name === 'QuotaExceededError') {
+                this.showPopup('Storage space full! Clearing old data...', 'warning');
+                this.clearAllData();
+                // Try again after clearing
+                try {
+                    localStorage.setItem('jsonViewerData', JSON.stringify(storageData));
+                    console.log('💾 Data saved after clearing old data');
+                    this.showPopup('Data saved after clearing old data', 'success');
+                } catch (retryError) {
+                    this.showPopup('Unable to save data due to storage limitations.', 'error');
                 }
-            });
+            }
         }
+    }
+
+    loadStoredData() {
+        console.log('🔍 Checking for stored data...');
         
-        // Apply detector filter
-        if (this.filterState.detector !== 'all') {
-            filtered = filtered.filter(item => 
-                (item.detector || '').toLowerCase() === this.filterState.detector.toLowerCase()
-            );
+        try {
+            const storedData = localStorage.getItem('jsonViewerData');
+            
+            if (!storedData) {
+                console.log('📭 No stored data found');
+                this.hideDataUI();
+                return;
+            }
+            
+            const parsedData = JSON.parse(storedData);
+            
+            if (!parsedData || !parsedData.data || !Array.isArray(parsedData.data) || parsedData.data.length === 0) {
+                console.log('⚠️ Stored data is invalid or empty');
+                this.hideDataUI();
+                return;
+            }
+            
+            console.log('✅ Found stored data from:', parsedData.timestamp);
+            console.log('📊 Loading', parsedData.data.length, 'stored items');
+            
+            this.loadDataIntoApp(parsedData.data);
+            
+        } catch (error) {
+            console.error('❌ Error loading stored data:', error);
+            localStorage.removeItem('jsonViewerData');
+            this.hideDataUI();
         }
+    }
+
+    loadReviewedItems() {
+        try {
+            const stored = localStorage.getItem('reviewedItems');
+            this.reviewedItems = stored ? new Set(JSON.parse(stored)) : new Set();
+            console.log('📋 Loaded', this.reviewedItems.size, 'reviewed items');
+        } catch (error) {
+            console.error('❌ Error loading reviewed items:', error);
+            this.reviewedItems = new Set();
+        }
+    }
+
+    saveReviewedItems() {
+        try {
+            localStorage.setItem('reviewedItems', JSON.stringify([...this.reviewedItems]));
+        } catch (error) {
+            console.error('❌ Error saving reviewed items:', error);
+        }
+    }
+
+    showDataUI() {
+        const summarySection = document.getElementById('summarySection');
+        const noData = document.getElementById('noData');
+        const uploadHint = document.getElementById('uploadHint');
         
-        // Apply sorting
-        if (this.sortState.column) {
-            filtered.sort((a, b) => {
-                const aVal = a[this.sortState.column] || '';
-                const bVal = b[this.sortState.column] || '';
+        if (summarySection) summarySection.style.display = 'block';
+        if (noData) noData.style.display = 'none';
+        if (uploadHint) uploadHint.style.display = 'block';
+    }
+
+    hideDataUI() {
+        const summarySection = document.getElementById('summarySection');
+        const noData = document.getElementById('noData');
+        const tableContainer = document.getElementById('tableContainer');
+        const uploadHint = document.getElementById('uploadHint');
+        
+        if (summarySection) summarySection.style.display = 'none';
+        if (noData) noData.style.display = 'block';
+        if (uploadHint) uploadHint.style.display = 'none';
+        
+        if (tableContainer) {
+            tableContainer.innerHTML = `
+                <div class="no-data" id="noData">
+                    <h3>No data loaded</h3>
+                    <p>Please upload a JSON file to view the results</p>
+                </div>
+            `;
+        }
+    }
+
+    clearAllData() {
+        const message = `This will permanently remove:<br>
+            • Your uploaded JSON file(s)<br>
+            • All review marks<br>
+            • All stored data<br><br>
+            <strong>This action cannot be undone.</strong>`;
+
+        this.showConfirmPopup(
+            message,
+            () => {
+                console.log('🧹 Clearing all data...');
                 
-                const result = aVal.toString().localeCompare(bVal.toString());
-                return this.sortState.direction === 'asc' ? result : -result;
-            });
-        }
-        
-        this.filteredData = filtered;
-        this.renderTable();
-        this.updateResultsCount();
+                // Clear localStorage
+                localStorage.removeItem('jsonViewerData');
+                localStorage.removeItem('reviewedItems');
+                
+                // Reset all app state
+                this.data = [];
+                this.filteredData = [];
+                this.reviewedItems = new Set();
+                this.currentReport = null;
+                
+                // Clear search input
+                const searchInput = document.getElementById('globalSearch');
+                if (searchInput) searchInput.value = '';
+                
+                // Clear all filter inputs
+                document.querySelectorAll('[data-filter]').forEach(input => {
+                    input.value = '';
+                });
+                
+                // Update UI to show empty state
+                this.hideDataUI();
+                
+                console.log('✅ All data cleared successfully');
+                this.showPopup('All data has been cleared successfully!', 'success');
+            },
+            null,
+            'warning'
+        );
     }
 
-    searchInItem(item, term) {
-        const searchFields = [
-            'repo_url', 'file_path', 'raw_secret', 'detector', 
-            'email', 'commit', 'author'
-        ];
-        
-        return searchFields.some(field => {
-            const value = item[field];
-            return value && value.toString().toLowerCase().includes(term);
-        });
-    }
-
-    // UI Updates
-    updateUI() {
-        this.updateSummary();
-        this.updateDetectorFilters();
-        this.renderTable();
-        this.updateResultsCount();
-        this.toggleDataVisibility();
+    generateItemId(item) {
+        return `${item.repo_url || ''}-${item.commit || ''}-${item.file_path || ''}-${item.raw_secret || ''}`;
     }
 
     updateSummary() {
-        const stats = {
-            total: this.data.length,
-            verified: this.data.filter(item => item.verified).length,
-            reviewed: this.data.filter(item => item.reviewed).length,
-            repos: new Set(this.data.map(item => item.repo_url)).size
+        const totalSecrets = this.data.length;
+        const uniqueRepos = new Set(this.data.map(item => item.repo_url)).size;
+        const verifiedSecrets = this.data.filter(item => item.verified).length;
+        const reviewedCount = this.data.filter(item => item.reviewed).length;
+
+        const elements = {
+            totalSecrets: document.getElementById('totalSecrets'),
+            totalRepos: document.getElementById('totalRepos'),
+            verifiedSecrets: document.getElementById('verifiedSecrets'),
+            reviewedCount: document.getElementById('reviewedCount')
         };
 
-        this.updateElement('totalSecrets', stats.total);
-        this.updateElement('verifiedSecrets', stats.verified);
-        this.updateElement('reviewedCount', stats.reviewed);
-        this.updateElement('totalRepos', stats.repos);
+        if (elements.totalSecrets) elements.totalSecrets.textContent = totalSecrets;
+        if (elements.totalRepos) elements.totalRepos.textContent = uniqueRepos;
+        if (elements.verifiedSecrets) elements.verifiedSecrets.textContent = verifiedSecrets;
+        if (elements.reviewedCount) elements.reviewedCount.textContent = reviewedCount;
 
-        this.updateDetectorBreakdown();
-    }
-
-    updateDetectorBreakdown() {
-        const detectors = {};
+        // Update detector breakdown
+        const detectorCounts = {};
         this.data.forEach(item => {
             const detector = item.detector || 'Unknown';
-            detectors[detector] = (detectors[detector] || 0) + 1;
+            detectorCounts[detector] = (detectorCounts[detector] || 0) + 1;
         });
 
-        const listElement = document.getElementById('detectorList');
-        if (listElement) {
-            listElement.innerHTML = Object.entries(detectors)
+        const detectorList = document.getElementById('detectorList');
+        if (detectorList) {
+            detectorList.innerHTML = Object.entries(detectorCounts)
                 .sort(([,a], [,b]) => b - a)
                 .map(([detector, count]) => `
                     <div class="detector-item">
                         <span>${detector}</span>
-                        <span class="count">${count}</span>
+                        <span>${count}</span>
                     </div>
                 `).join('');
         }
     }
 
-    updateDetectorFilters() {
-        const detectors = [...new Set(this.data.map(item => item.detector || 'Unknown'))].sort();
-        const select = document.getElementById('detectorFilter');
-        
-        if (select) {
-            select.innerHTML = '<option value="all">All Detectors</option>' +
-                detectors.map(detector => 
-                    `<option value="${detector}">${detector}</option>`
-                ).join('');
-        }
-    }
-
-    updateResultsCount() {
-        const countElement = document.getElementById('resultsCount');
-        if (countElement) {
-            if (this.data.length === 0) {
-                countElement.textContent = 'No data loaded';
-            } else {
-                const filtered = this.filteredData.length;
-                const total = this.data.length;
-                countElement.textContent = filtered === total 
-                    ? `${total} results`
-                    : `${filtered} of ${total} results`;
-            }
-        }
-    }
-
-    toggleDataVisibility() {
-        const hasData = this.data.length > 0;
-        
-        this.toggleElement('summarySection', hasData);
-        this.toggleElement('filtersBar', hasData);
-        this.toggleElement('noDataState', !hasData);
-        
-        if (hasData) {
-            const hint = document.getElementById('uploadHint');
-            if (hint) hint.style.display = 'block';
-        }
-    }
-
-    // Table rendering
     renderTable() {
         const container = document.getElementById('tableContainer');
         if (!container) return;
-
+        
         if (this.filteredData.length === 0) {
-            if (this.data.length > 0) {
-                container.innerHTML = `
-                    <div class="no-data-state">
-                        <div class="no-data-icon">🔍</div>
-                        <h3>No matching results</h3>
-                        <p>Try adjusting your search or filter criteria</p>
-                    </div>
-                `;
+            if (this.data.length === 0) {
+                this.hideDataUI();
+            } else {
+                container.innerHTML = '<div class="no-data"><h3>No matching results</h3><p>Try adjusting your search filters</p></div>';
             }
             return;
         }
 
         const table = document.createElement('table');
         table.className = 'data-table';
-        table.innerHTML = this.generateTableHTML();
         
+        // Create header
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+            <tr>
+                <th>✓</th>
+                <th>Repository</th>
+                <th>Author</th>
+                <th>Commit</th>
+                <th>Filename</th>
+                <th>Secret</th>
+                <th>Detector</th>
+                <th>Verified</th>
+                <th>Actions</th>
+            </tr>
+            <tr class="filter-row">
+                <td></td>
+                <td><input type="text" placeholder="Filter repo..." data-filter="repo"></td>
+                <td><input type="text" placeholder="Filter author..." data-filter="author"></td>
+                <td><input type="text" placeholder="Filter commit..." data-filter="commit"></td>
+                <td><input type="text" placeholder="Filter filename..." data-filter="filename"></td>
+                <td><input type="text" placeholder="Filter secret..." data-filter="secret"></td>
+                <td><input type="text" placeholder="Filter detector..." data-filter="detector"></td>
+                <td></td>
+                <td></td>
+            </tr>
+        `;
+
+        // Create body
+        const tbody = document.createElement('tbody');
+        tbody.innerHTML = this.filteredData.map(item => this.createTableRow(item)).join('');
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
         container.innerHTML = '';
         container.appendChild(table);
-        
-        this.attachTableEvents(table);
+
+        // Add event listeners
+        this.addTableEventListeners(table);
     }
 
-    generateTableHTML() {
-        const headers = [
-            { key: 'reviewed', label: '✓', sortable: false },
-            { key: 'repo_url', label: 'Repository', sortable: true },
-            { key: 'detector', label: 'Detector', sortable: true },
-            { key: 'file_path', label: 'File', sortable: true },
-            { key: 'raw_secret', label: 'Secret', sortable: false },
-            { key: 'verified', label: 'Verified', sortable: true },
-            { key: 'severity', label: 'Severity', sortable: true },
-            { key: 'actions', label: 'Actions', sortable: false }
-        ];
+    addTableEventListeners(table) {
+        // Filter inputs
+        table.querySelectorAll('[data-filter]').forEach(input => {
+            input.addEventListener('input', (e) => this.handleColumnFilter(e.target.dataset.filter, e.target.value));
+        });
 
-        const headerRow = headers.map(h => {
-            const sortClass = this.sortState.column === h.key 
-                ? `sortable sort-${this.sortState.direction}` 
-                : (h.sortable ? 'sortable' : '');
-            
-            return `<th class="${sortClass}" data-column="${h.key}">${h.label}</th>`;
-        }).join('');
-
-        const bodyRows = this.filteredData.map(item => this.generateTableRow(item)).join('');
-
-        return `
-            <thead>
-                <tr>${headerRow}</tr>
-            </thead>
-            <tbody>${bodyRows}</tbody>
-        `;
+        // Review checkboxes
+        table.querySelectorAll('.review-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const id = parseInt(e.target.dataset.id);
+                this.toggleReview(id);
+            });
+        });
     }
 
-    generateTableRow(item) {
+    createTableRow(item) {
         const repoName = this.extractRepoName(item.repo_url);
+        const authorName = this.extractAuthorName(item.email);
+        const shortCommit = (item.commit || '').substring(0, 8);
         const fileName = this.extractFileName(item.file_path);
-        const shortSecret = this.truncateText(item.raw_secret, 20);
+        const shortSecret = (item.raw_secret || '').substring(0, 16) + '...';
 
         return `
-            <tr class="${item.reviewed ? 'reviewed-row' : ''}" data-id="${item.id}">
+            <tr class="${item.reviewed ? 'reviewed-row' : ''}">
                 <td>
                     <input type="checkbox" class="review-checkbox" 
                            data-id="${item.id}" ${item.reviewed ? 'checked' : ''}>
                 </td>
                 <td>
-                    <a href="${item.repo_url}" target="_blank" class="repo-link" 
-                       title="${item.repo_url}">${repoName}</a>
+                    <a href="${item.repo_url}" target="_blank" class="repo-link" title="${item.repo_url}">
+                        ${repoName}
+                    </a>
                 </td>
-                <td>
-                    <span class="detector-badge">${item.detector || 'Unknown'}</span>
+                <td title="${item.email}">${authorName}</td>
+                <td title="${item.commit}">
+                    <a href="${item.commit_url}" target="_blank" class="repo-link">
+                        ${shortCommit}
+                    </a>
                 </td>
                 <td title="${item.file_path}">${fileName}</td>
                 <td title="${item.raw_secret}">${shortSecret}</td>
+                <td>
+                    <span class="detector-badge">${item.detector || 'Unknown'}</span>
+                </td>
                 <td>
                     <span class="${item.verified ? 'verified-badge' : 'unverified-badge'}">
                         ${item.verified ? 'Yes' : 'No'}
                     </span>
                 </td>
                 <td>
-                    <span class="severity-badge severity-${item.severity}">${item.severity}</span>
-                </td>
-                <td>
                     <div class="action-buttons">
-                        <button class="btn btn-sm btn-report" data-action="report" data-id="${item.id}">
-                            🐛 Report
-                        </button>
+                        <button class="btn-sm btn-report" onclick="generateReport(${item.id})">🐛 Report</button>
                     </div>
                 </td>
             </tr>
         `;
     }
 
-    attachTableEvents(table) {
-        // Sortable headers
-        table.querySelectorAll('th.sortable').forEach(th => {
-            th.addEventListener('click', () => {
-                const column = th.dataset.column;
-                this.sortBy(column);
-            });
-        });
-
-        // Review checkboxes
-        table.querySelectorAll('.review-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
-                const itemId = e.target.dataset.id;
-                this.toggleReview(itemId);
-            });
-        });
-
-        // Action buttons
-        table.querySelectorAll('[data-action="report"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const itemId = e.target.dataset.id;
-                this.generateReport(itemId);
-            });
-        });
+    extractRepoName(url) {
+        if (!url) return 'Unknown';
+        const parts = url.split('/');
+        return parts.length >= 2 ? parts[parts.length - 1] : url;
     }
 
-    // Report generation using detector-intelligence.js
-    generateReport(itemId) {
-        const item = this.data.find(item => item.id === itemId);
+    extractAuthorName(email) {
+        if (!email) return 'Unknown';
+        const match = email.match(/^([^<]+)/);
+        return match ? match[1].trim() : email.split('@')[0];
+    }
+
+    extractFileName(path) {
+        if (!path) return 'Unknown';
+        return path.split('/').pop();
+    }
+
+    handleGlobalSearch(query) {
+        if (!query.trim()) {
+            this.filteredData = [...this.data];
+        } else {
+            const searchTerm = query.toLowerCase();
+            this.filteredData = this.data.filter(item => 
+                JSON.stringify(item).toLowerCase().includes(searchTerm)
+            );
+        }
+        this.renderTable();
+    }
+
+    handleColumnFilter(column, value) {
+        const filters = {};
+        document.querySelectorAll('[data-filter]').forEach(input => {
+            if (input.value.trim()) {
+                filters[input.dataset.filter] = input.value.toLowerCase();
+            }
+        });
+
+        this.filteredData = this.data.filter(item => {
+            return Object.entries(filters).every(([key, value]) => {
+                switch (key) {
+                    case 'repo':
+                        return (item.repo_url || '').toLowerCase().includes(value);
+                    case 'author':
+                        return (item.email || '').toLowerCase().includes(value);
+                    case 'commit':
+                        return (item.commit || '').toLowerCase().includes(value);
+                    case 'filename':
+                        return (item.file_path || '').toLowerCase().includes(value);
+                    case 'secret':
+                        return (item.raw_secret || '').toLowerCase().includes(value);
+                    case 'detector':
+                        return (item.detector || '').toLowerCase().includes(value);
+                    default:
+                        return true;
+                }
+            });
+        });
+        this.renderTable();
+    }
+
+    toggleReview(id) {
+        const item = this.data.find(item => item.id === id);
         if (!item) return;
 
-        console.log('🐛 Generating report for item:', itemId);
-
-        // Use detector-intelligence.js if available
-        let report;
-        if (typeof generateBugBountyReport === 'function') {
-            try {
-                report = generateBugBountyReport(item);
-                console.log('✅ Report generated using detector-intelligence.js');
-            } catch (error) {
-                console.warn('⚠️ detector-intelligence.js failed, using fallback:', error);
-                report = this.createFallbackReport(item);
-            }
+        item.reviewed = !item.reviewed;
+        const itemId = this.generateItemId(item);
+        
+        if (item.reviewed) {
+            this.reviewedItems.add(itemId);
         } else {
-            console.warn('⚠️ detector-intelligence.js not found, using fallback');
-            report = this.createFallbackReport(item);
+            this.reviewedItems.delete(itemId);
+        }
+        
+        this.saveReviewedItems();
+        this.updateSummary();
+        this.renderTable();
+    }
+
+    exportData() {
+        if (this.data.length === 0) {
+            this.showPopup('No data to export. Please upload a JSON file first.', 'warning');
+            return;
         }
 
-        this.showReportModal(report);
-    }
-
-    createFallbackReport(item) {
-        return {
-            title: `Exposed ${item.detector || 'Secret'} in ${this.extractRepoName(item.repo_url)}`,
-            summary: `A ${item.detector || 'secret'} was found exposed in the repository. This could potentially allow unauthorized access to sensitive systems.`,
-            poc: `**Repository:** ${item.repo_url || 'Unknown'}\n**File Path:** ${item.file_path || 'Unknown'}\n**Commit:** ${item.commit || 'Unknown'}\n**Secret Type:** ${item.detector || 'Unknown'}\n\n**Evidence:**\nThe exposed secret was found in the codebase.`,
-            impact: `The exposure of this ${item.detector || 'credential'} could result in:\n\n• Unauthorized access to systems or services\n• Data breach and potential data exfiltration\n• Service disruption\n• Financial losses\n• Compliance violations`,
-            severity: item.verified ? 'critical' : 'high'
+        const exportData = {
+            summary: {
+                totalSecrets: this.data.length,
+                reviewedCount: this.data.filter(item => item.reviewed).length,
+                exportDate: new Date().toISOString()
+            },
+            reviewed: this.data.filter(item => item.reviewed),
+            unreviewed: this.data.filter(item => !item.reviewed),
+            all: this.data
         };
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `security_scan_export_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        this.showPopup('Data exported successfully!', 'success');
     }
 
-    showReportModal(report) {
+    showReport(id) {
+        const item = this.data.find(item => item.id === id);
+        if (!item) return;
+
+        const report = generateBugBountyReport(item);
+        
         const elements = {
             title: document.getElementById('reportTitle'),
             summary: document.getElementById('reportSummary'),
@@ -690,78 +722,135 @@ class JSONViewer {
             elements.severityBadge.className = `severity-badge severity-${report.severity.toLowerCase()}`;
         }
         
-        if (elements.modal) {
-            elements.modal.style.display = 'block';
-            elements.modal.classList.add('show');
-        }
+        if (elements.modal) elements.modal.style.display = 'block';
         
         this.currentReport = report;
     }
 
-    hideModal() {
-        const modal = document.getElementById('reportModal');
-        if (modal) {
-            modal.style.display = 'none';
-            modal.classList.remove('show');
+    copyToClipboard(elementId, button) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = element.value;
+        document.body.appendChild(tempTextarea);
+        tempTextarea.select();
+        
+        try {
+            document.execCommand('copy');
+            
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            button.classList.add('copy-success');
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('copy-success');
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
         }
+        
+        document.body.removeChild(tempTextarea);
     }
 
-    // Review system
-    toggleReview(itemId) {
-        const item = this.data.find(item => item.id === itemId);
-        if (!item) return;
-
-        item.reviewed = !item.reviewed;
-        const reviewId = this.generateItemId(item);
+    copyAllReport() {
+        if (!this.currentReport) return;
         
-        if (item.reviewed) {
-            this.reviewedItems.add(reviewId);
+        const fullReport = `${this.currentReport.title}\n\n## Summary\n${this.currentReport.summary}\n\n## Proof of Concept\n${this.currentReport.poc}\n\n## Impact\n${this.currentReport.impact}`;
+        
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(fullReport).then(() => {
+                this.showCopyFeedback('copyAllReport');
+            }).catch(() => {
+                this.fallbackCopyText(fullReport, 'copyAllReport');
+            });
         } else {
-            this.reviewedItems.delete(reviewId);
+            this.fallbackCopyText(fullReport, 'copyAllReport');
+        }
+    }
+
+    fallbackCopyText(text, buttonId) {
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = text;
+        document.body.appendChild(tempTextarea);
+        tempTextarea.select();
+        
+        try {
+            document.execCommand('copy');
+            this.showCopyFeedback(buttonId);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
         }
         
-        this.saveReviewedItems();
-        this.updateSummary();
-        this.applyFiltersAndSort();
+        document.body.removeChild(tempTextarea);
     }
 
-    clearAllData() {
-        const result = confirm(
-            'This will permanently remove:\n\n' +
-            '• Your uploaded JSON file(s)\n' +
-            '• All review marks\n' +
-            '• All stored data\n\n' +
-            'This action cannot be undone.\n\n' +
-            'Are you sure you want to continue?'
-        );
-
-        if (result) {
-            console.log('🧹 Clearing all data...');
-            
-            localStorage.removeItem('jsonViewerData');
-            localStorage.removeItem('reviewedItems');
-            
-            this.data = [];
-            this.filteredData = [];
-            this.reviewedItems = new Set();
-            this.currentReport = null;
-            
-            const searchInput = document.getElementById('globalSearch');
-            if (searchInput) searchInput.value = '';
-            
-            this.updateUI();
-            
-            this.showToast('All data has been cleared successfully!', 'success');
-        }
+    showCopyFeedback(buttonId) {
+        const btn = document.getElementById(buttonId);
+        if (!btn) return;
+        
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copied All!';
+        btn.classList.add('copy-success');
+        
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.remove('copy-success');
+        }, 2000);
     }
 
-    exportData() {
-        if (this.data.length === 0) {
-            this.showToast('No data to export. Please upload a JSON file first.', 'warning');
-            return;
-        }
+    downloadReport() {
+        if (!this.currentReport) return;
+        
+        const content = `# ${this.currentReport.title}\n\n## Summary\n${this.currentReport.summary}\n\n## Proof of Concept\n${this.currentReport.poc}\n\n## Impact\n${this.currentReport.impact}`;
+        
+        const blob = new Blob([content], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bug_bounty_report_${Date.now()}.md`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        this.showPopup('Report downloaded successfully!', 'success');
+    }
+}
 
-        const exportData = {
-            summary: {
-                totalSecrets: this.data.length,
-                reviewedCount: this.data
+// Global function for report generation
+function generateReport(id) {
+    if (window.jsonViewer) {
+        window.jsonViewer.showReport(id);
+    }
+}
+
+// Robust initialization
+function initializeApp() {
+    console.log('🚀 Initializing JSON Viewer App...');
+    
+    if (window.jsonViewer) {
+        console.log('⚠️ App already initialized');
+        return;
+    }
+    
+    window.jsonViewer = new JSONViewer();
+    console.log('✅ JSON Viewer initialized successfully');
+}
+
+// Multiple initialization approaches
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    // DOM is already ready
+    setTimeout(initializeApp, 100);
+}
+
+// Backup initialization
+window.addEventListener('load', () => {
+    if (!window.jsonViewer) {
+        console.log('🔄 Backup initialization...');
+        initializeApp();
+    }
+});
